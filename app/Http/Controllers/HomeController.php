@@ -17,7 +17,7 @@ class HomeController extends Controller
      */
     public function index()
     {
-        $timeWindowOptions = [
+        $timeWindowOptions = collect([
             ['key' => 'nicht', 'label' => __('Keine Sanierung')],
             ['key' => 'bis_5', 'label' => __('In den letzten 5 Jahren')],
             ['key' => 'bis_10', 'label' => __('In den letzten 5–10 Jahren')],
@@ -25,7 +25,7 @@ class HomeController extends Controller
             ['key' => 'bis_20', 'label' => __('In den letzten 15–20 Jahren')],
             ['key' => 'ueber_20', 'label' => __('Vor mehr als 20 Jahren')],
             ['key' => 'weiss_nicht', 'label' => __('Weiß nicht')],
-        ];
+        ])->sortBy('label')->values()->all();
 
         $propertyTypes = PropertyType::orderBy('label')->get()->map(fn ($type) => [
             'id' => $type->id,

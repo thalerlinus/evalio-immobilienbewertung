@@ -190,6 +190,7 @@ const statusLabel = computed(() => {
         confirmed: 'bestätigt',
         sent: 'versendet',
         pending: 'offen',
+        draft: 'Entwurf',
     };
 
     return map[status] ?? status;
@@ -514,10 +515,10 @@ const confirmOffer = async () => {
                                     <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">
                                         Kontaktdaten
                                     </h3>
-                                    <dl class="mt-3 grid gap-4 text-sm text-gray-600 sm:grid-cols-2 lg:grid-cols-3">
+                                    <dl class="mt-3 grid gap-4 text-sm text-gray-600">
                                         <div>
                                             <dt class="font-medium text-gray-500">E-Mail</dt>
-                                            <dd class="mt-1 font-semibold text-gray-900">
+                                            <dd class="mt-1 font-semibold text-gray-900 break-words">
                                                 <a v-if="contactInputs.email" :href="`mailto:${contactInputs.email}`" class="text-indigo-600 hover:underline">
                                                     {{ contactInputs.email }}
                                                 </a>

@@ -48,7 +48,7 @@ const defaultRenovations = () =>
     }));
 
 const form = reactive({
-    property_type_key: props.propertyTypes[0]?.key ?? '',
+    property_type_key: '',
     gnd_override: '',
     baujahr: '',
     anschaffungsjahr: '',
@@ -130,7 +130,15 @@ const factorFor = (categoryKey, windowKey) => {
     return factor ? factor.factor : 0;
 };
 
-const weightFor = (percent) => extentWeightMap.value[percent ?? 0] ?? 0;
+const weightFor = (percent) => {
+    const value = percent ?? 0;
+    // Wenn ein exakter Wert in der Map existiert, verwenden wir ihn
+    if (extentWeightMap.value[value] !== undefined) {
+        return extentWeightMap.value[value];
+    }
+    // Ansonsten berechnen wir das Gewicht direkt aus dem Prozentsatz
+    return value / 100;
+};
 
 const categoryPoints = (category, renovation) => {
     const weight = weightFor(renovation.extent_percent ?? 0);
@@ -307,7 +315,7 @@ const submit = async () => {
         renovations: form.renovations.map((item) => ({
             category_key: item.category_key,
             time_window_key: item.time_window_key,
-            extent_percent: item.extent_percent,
+            extent_percent: Number(item.extent_percent) || 0,
         })),
         address: {
             street: form.address.street || null,
@@ -390,47 +398,28 @@ const submit = async () => {
         </section>
 
         <section class="bg-slate-100 py-12">
-            <div class="mx-auto flex max-w-6xl flex-col gap-8 px-4 lg:flex-row">
-                <div class="w-full space-y-6 lg:w-2/3">
-                    <div class="flex items-center justify-between">
+            <div class="mx-auto max-w-4xl px-4">
+                <div class="w-full space-y-6">
+                    <div>
                         <h2 class="text-2xl font-semibold text-slate-900">
                             Eingabemaske
                         </h2>
-                        <div class="text-sm text-slate-500">
-                            Laravel {{ laravelVersion }} · PHP {{ phpVersion }}
-                        </div>
                     </div>
 
                     <form
                         @submit.prevent="submit"
-                        class="relative space-y-8"
-                        :class="{ 'opacity-80': submitting }"
+                        class="space-y-8"
                         :aria-busy="submitting"
                     >
-                        <transition name="fade">
-                            <div
-                                v-if="submitting"
-                                class="absolute inset-0 z-20 flex flex-col items-center justify-center rounded-3xl bg-white/70 backdrop-blur-sm"
-                            >
-                                <svg
-                                    class="h-8 w-8 animate-spin text-blue-600"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                                </svg>
-                                <p class="mt-3 text-sm font-medium text-blue-700">Berechnung läuft …</p>
-                            </div>
-                        </transition>
                         <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
                             <h3 class="mb-4 text-lg font-semibold text-slate-900">
                                 Objektinformationen
                             </h3>
                             <div class="grid gap-4 md:grid-cols-2">
                                 <div class="md:col-span-2">
-                                    <label class="block text-sm font-medium text-slate-700">Immobilienart</label>
+                                    <label class="block text-sm font-medium text-slate-700">
+                                        Immobilienart <span class="text-red-600">*</span>
+                                    </label>
                                     <select
                                         v-model="form.property_type_key"
                                         class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -483,7 +472,9 @@ const submit = async () => {
                                 </div>
                                 <template v-if="!isRequestOnlyProperty">
                                     <div>
-                                        <label class="block text-sm font-medium text-slate-700">Baujahr</label>
+                                        <label class="block text-sm font-medium text-slate-700">
+                                            Baujahr <span class="text-red-600">*</span>
+                                        </label>
                                         <input
                                             v-model="form.baujahr"
                                             type="number"
@@ -493,7 +484,9 @@ const submit = async () => {
                                         />
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-slate-700">Anschaffungsjahr</label>
+                                        <label class="block text-sm font-medium text-slate-700">
+                                            Anschaffungsjahr <span class="text-red-600">*</span>
+                                        </label>
                                         <input
                                             v-model="form.anschaffungsjahr"
                                             type="number"
@@ -503,7 +496,9 @@ const submit = async () => {
                                         />
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-slate-700">Steuerjahr</label>
+                                        <label class="block text-sm font-medium text-slate-700">
+                                            Steuerjahr <span class="text-red-600">*</span>
+                                        </label>
                                         <input
                                             v-model="form.steuerjahr"
                                             type="number"
@@ -589,13 +584,10 @@ const submit = async () => {
                             v-if="!isRequestOnlyProperty"
                             class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200"
                         >
-                            <div class="mb-4 flex items-center justify-between">
+                            <div class="mb-4">
                                 <h3 class="text-lg font-semibold text-slate-900">
                                     Sanierungen & Zustandsbewertung
                                 </h3>
-                                <div class="text-sm text-slate-500">
-                                    Vorschau Score: <strong>{{ formatNumber(previewScore, 1) }} Punkte</strong>
-                                </div>
                             </div>
 
                             <div class="grid gap-4 md:grid-cols-2">
@@ -604,28 +596,34 @@ const submit = async () => {
                                     :key="category.key"
                                     class="rounded-xl border border-slate-200 p-4"
                                 >
-                                    <h4 class="text-sm font-semibold text-slate-900">
+                                    <h4 class="mb-3 text-sm font-semibold text-slate-900">
                                         {{ category.label }}
                                     </h4>
-                                    <p class="mb-3 text-xs text-slate-500">
-                                        Max. {{ formatNumber(category.max_points, 1) }} Punkte
-                                    </p>
 
-                                    <label class="block text-xs font-medium text-slate-700">
-                                        Umfang
-                                    </label>
-                                    <select
-                                        v-model.number="form.renovations[index].extent_percent"
-                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    >
-                                        <option
-                                            v-for="option in extentOptions"
-                                            :key="option.value"
-                                            :value="option.value"
-                                        >
-                                            {{ option.label }}
-                                        </option>
-                                    </select>
+                                    <div class="space-y-2">
+                                        <label class="block text-xs font-medium text-slate-700">
+                                            Umfang: {{ form.renovations[index].extent_percent }}%
+                                            <span v-if="extentOptions.find(opt => opt.value === form.renovations[index].extent_percent)" class="text-slate-500">
+                                                ({{ extentOptions.find(opt => opt.value === form.renovations[index].extent_percent).label }})
+                                            </span>
+                                        </label>
+                                        <input
+                                            type="range"
+                                            v-model.number="form.renovations[index].extent_percent"
+                                            :min="0"
+                                            :max="100"
+                                            :step="20"
+                                            class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                                        />
+                                        <div class="flex justify-between text-xs text-slate-500">
+                                            <span>0%</span>
+                                            <span>20%</span>
+                                            <span>40%</span>
+                                            <span>60%</span>
+                                            <span>80%</span>
+                                            <span>100%</span>
+                                        </div>
+                                    </div>
 
                                     <label class="mt-3 block text-xs font-medium text-slate-700">
                                         Zeitpunkt
@@ -686,7 +684,7 @@ const submit = async () => {
                                 </div>
                                 <div class="md:col-span-2">
                                     <label class="block text-sm font-medium text-slate-700" for="contact-email">
-                                        E-Mail-Adresse <span class="text-red-500">*</span>
+                                        E-Mail-Adresse <span class="text-red-600">*</span>
                                     </label>
                                     <input
                                         id="contact-email"
@@ -796,8 +794,8 @@ const submit = async () => {
                         <div class="flex flex-wrap items-center gap-3">
                             <button
                                 type="submit"
-                                :disabled="submitting || isRequestOnlyProperty || !form.acceptTerms"
-                                class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-6 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-blue-400"
+                                :disabled="submitting || isRequestOnlyProperty || !form.acceptTerms || !form.property_type_key"
+                                class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-6 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-blue-400 disabled:hover:bg-blue-400"
                             >
                                 <svg
                                     v-if="submitting"
@@ -813,7 +811,7 @@ const submit = async () => {
                                         d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
                                     />
                                 </svg>
-                                Berechnen
+                                {{ submitting ? 'Wird berechnet...' : 'Berechnen' }}
                             </button>
                             <button
                                 type="button"
@@ -827,148 +825,6 @@ const submit = async () => {
                         </div>
                     </form>
                 </div>
-
-                <aside class="w-full space-y-6 lg:w-1/3">
-                    <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-                        <h3 class="text-lg font-semibold text-slate-900">
-                            Ergebnis
-                        </h3>
-                        <p class="mt-2 text-sm text-slate-500">
-                            Nach Absenden sehen Sie hier RND, AfA-Satz und Empfehlung.
-                        </p>
-
-                        <div v-if="result" class="mt-4 space-y-4">
-                            <div class="rounded-xl bg-blue-50 p-4 text-blue-900">
-                                <div class="text-sm uppercase tracking-wide text-blue-700">
-                                    Restnutzungsdauer (RND)
-                                </div>
-                                <div class="mt-2 text-3xl font-bold">
-                                    {{ formatNumber(result.rnd_years, 2) }} Jahre
-                                </div>
-                                <div class="mt-1 text-sm text-blue-700">
-                                    Ersteinschätzung: {{ intervalLabel || '—' }}
-                                </div>
-                                <div
-                                    v-if="result && result.rnd_min !== null && result.rnd_max !== null"
-                                    class="mt-1 text-xs text-blue-600"
-                                >
-                                    Intervall: {{ result.rnd_min }} – {{ result.rnd_max }} Jahre
-                                </div>
-                            </div>
-
-                            <div class="rounded-xl bg-emerald-50 p-4 text-emerald-900">
-                                <div class="text-sm uppercase tracking-wide text-emerald-700">
-                                    AfA-Satz
-                                </div>
-                                <div class="mt-2 text-3xl font-bold">
-                                    {{ formatNumber(result.afa_percent, 2) }} % p.a.
-                                </div>
-                            </div>
-
-                            <div class="rounded-xl bg-slate-50 p-4 text-slate-900">
-                                <div class="text-sm uppercase tracking-wide text-slate-600">
-                                    Empfehlung
-                                </div>
-                                <div class="mt-2 text-base font-semibold">
-                                    {{ result.recommendation ?? 'Keine Empfehlung verfügbar' }}
-                                </div>
-                            </div>
-
-                            <div class="rounded-xl bg-white p-4 ring-1 ring-slate-200">
-                                <div class="text-sm font-semibold text-slate-900">
-                                    Score & Debug
-                                </div>
-                                <dl class="mt-3 space-y-2 text-sm text-slate-600">
-                                    <div class="flex justify-between">
-                                        <dt>Punkte (Score)</dt>
-                                        <dd>{{ formatNumber(result.score, 1) }}</dd>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <dt>Relatives Alter</dt>
-                                        <dd>{{ formatNumber(result.result_debug?.relative_age * 100, 1) }} %</dd>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <dt>Formeltyp</dt>
-                                        <dd>{{ result.result_debug?.use_advanced_formula ? 'Komplexe Formel (a/b/c)' : 'Einfache Formel' }}</dd>
-                                    </div>
-                                    <div v-if="result.result_debug?.formula" class="space-y-1 border-t border-slate-100 pt-2 text-xs text-slate-500">
-                                        <div>Score-Set: {{ formatNumber(result.result_debug.formula.score, 1) }} Punkte</div>
-                                        <div>a = {{ formatNumber(result.result_debug.formula.a, 4) }}</div>
-                                        <div>b = {{ formatNumber(result.result_debug.formula.b, 4) }}</div>
-                                        <div>c = {{ formatNumber(result.result_debug.formula.c, 4) }}</div>
-                                    </div>
-                                </dl>
-                            </div>
-
-                            <div v-if="offer?.public_url" class="rounded-xl bg-amber-50 p-4 text-amber-900 ring-1 ring-amber-200">
-                                <div class="text-sm uppercase tracking-wide text-amber-700">
-                                    Individuelles Angebot
-                                </div>
-                                <p class="mt-2 text-base font-semibold">
-                                    Ihr persönliches Angebot ist fertiggestellt.
-                                </p>
-                                <p class="mt-2 text-sm">
-                                    Angebotsnummer: <span class="font-semibold">{{ offer.number }}</span>
-                                </p>
-                                <a
-                                    :href="offer.public_url"
-                                    target="_blank"
-                                    rel="noopener"
-                                    class="mt-4 inline-flex items-center justify-center rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-600"
-                                >
-                                    Angebot anzeigen
-                                </a>
-                            </div>
-
-                            <div v-if="result.score_details" class="rounded-xl bg-white p-4 ring-1 ring-slate-200">
-                                <h4 class="text-sm font-semibold text-slate-900">
-                                    Punkte nach Kategorien
-                                </h4>
-                                <ul class="mt-3 space-y-2 text-sm text-slate-600">
-                                    <li
-                                        v-for="(details, key) in result.score_details"
-                                        :key="key"
-                                        class="flex items-center justify-between"
-                                    >
-                                        <span>{{ details.label }}</span>
-                                        <span class="font-semibold">{{ formatNumber(details.points, 2) }}</span>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                        <div
-                            v-else-if="isRequestOnlyProperty"
-                            class="mt-6 rounded-xl border border-red-200 bg-red-50 p-6 text-center text-sm font-semibold text-red-700"
-                        >
-                            {{ requestOnlyHeadline }}. {{ requestOnlyMessage }}
-                        </div>
-                        <div
-                            v-else
-                            class="mt-6 rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500"
-                        >
-                            Bitte füllen Sie das Formular aus und starten Sie die Berechnung.
-                        </div>
-                    </div>
-
-                    <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-                        <h3 class="text-lg font-semibold text-slate-900">
-                            Vorkalkulation
-                        </h3>
-                        <p class="mt-2 text-sm text-slate-500">
-                            Live-Vorschau basierend auf Ihren Eingaben (ohne Gewähr):
-                        </p>
-                        <ul class="mt-3 space-y-2 text-sm text-slate-700">
-                            <li class="flex justify-between">
-                                <span>Gesamtpunkte (roh)</span>
-                                <span>{{ formatNumber(totalPoints, 2) }}</span>
-                            </li>
-                            <li class="flex justify-between">
-                                <span>Score gerundet</span>
-                                <span>{{ formatNumber(previewScore, 1) }}</span>
-                            </li>
-                        </ul>
-                    </div>
-                </aside>
             </div>
         </section>
     </MainLayout>
