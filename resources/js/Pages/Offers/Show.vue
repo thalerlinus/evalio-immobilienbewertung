@@ -328,22 +328,22 @@ const confirmOffer = async () => {
 
 <template>
     <MainLayout title="Ihr individuelles Angebot">
-        <section class="bg-indigo-600 py-16 text-white">
+        <section class="bg-[#d9bf8c] py-16 pb-24 text-slate-900">
             <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-                <p class="mb-2 text-sm font-semibold uppercase tracking-widest text-indigo-200">
+                <p class="mb-2 text-sm font-semibold uppercase tracking-widest text-slate-700">
                     Angebot {{ offer.number }}
                 </p>
                 <h1 class="text-3xl font-bold sm:text-4xl">Vielen Dank für Ihr Vertrauen!</h1>
-                <p class="mt-4 max-w-2xl text-indigo-100">
+                <p class="mt-4 max-w-2xl text-slate-800">
                     Hier finden Sie alle Details zu Ihrem individuell kalkulierten Gutachten-Angebot.
                     Bei Fragen stehen wir Ihnen jederzeit gerne zur Verfügung.
                 </p>
-                <div class="mt-6 flex flex-wrap items-center gap-4 text-sm text-indigo-100">
-                    <span class="inline-flex items-center gap-2 rounded-full bg-indigo-500/40 px-3 py-1 font-medium">
+                <div class="mt-8 flex flex-wrap items-center gap-6 text-sm text-slate-800">
+                    <span class="inline-flex items-center gap-2 rounded-full bg-white/60 px-4 py-1.5 font-medium">
                         Status: <span class="font-semibold capitalize">{{ statusLabel }}</span>
                     </span>
                     <span>Erstellt am {{ formatDateTime(offer.created_at) }}</span>
-                    <span v-if="offer.accepted_at" class="flex items-center gap-1 text-amber-200">
+                    <span v-if="offer.accepted_at" class="flex items-center gap-1 text-slate-900">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l3-3z" clip-rule="evenodd" />
                         </svg>
@@ -519,7 +519,7 @@ const confirmOffer = async () => {
                                         <div>
                                             <dt class="font-medium text-gray-500">E-Mail</dt>
                                             <dd class="mt-1 font-semibold text-gray-900 break-words">
-                                                <a v-if="contactInputs.email" :href="`mailto:${contactInputs.email}`" class="text-indigo-600 hover:underline">
+                                                <a v-if="contactInputs.email" :href="`mailto:${contactInputs.email}`" class="text-[#d9bf8c] hover:underline hover:text-[#c4a875]">
                                                     {{ contactInputs.email }}
                                                 </a>
                                                 <span v-else>—</span>
@@ -531,7 +531,7 @@ const confirmOffer = async () => {
                                                 <a
                                                     v-if="contactInputs.phone"
                                                     :href="phoneHref(contactInputs.phone)"
-                                                    class="text-indigo-600 hover:underline"
+                                                    class="text-[#d9bf8c] hover:underline hover:text-[#c4a875]"
                                                 >
                                                     {{ contactInputs.phone }}
                                                 </a>
@@ -656,7 +656,7 @@ const confirmOffer = async () => {
                                             v-model="confirmationConsent"
                                             type="checkbox"
                                             required
-                                            class="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                            class="mt-1 h-4 w-4 rounded border-gray-300 text-[#d9bf8c] focus:ring-[#d9bf8c]"
                                         />
                                         <span class="space-y-2 leading-snug">
                                             <span class="block text-sm font-semibold text-gray-900">
@@ -667,9 +667,9 @@ const confirmOffer = async () => {
                                             </span>
                                             <span class="block text-sm text-gray-700">
                                                 Die
-                                                <a href="/agb" target="_blank" rel="noreferrer" class="text-indigo-600 hover:underline">AGB</a>
+                                                <a href="/agb" target="_blank" rel="noreferrer" class="text-[#d9bf8c] hover:underline hover:text-[#c4a875]">AGB</a>
                                                 und
-                                                <a href="/widerrufsbelehrung" target="_blank" rel="noreferrer" class="text-indigo-600 hover:underline">Widerrufsbelehrung</a>
+                                                <a href="/widerrufsbelehrung" target="_blank" rel="noreferrer" class="text-[#d9bf8c] hover:underline hover:text-[#c4a875]">Widerrufsbelehrung</a>
                                                 habe ich zur Kenntnis genommen und akzeptiert.
                                             </span>
                                             <span class="block text-sm text-gray-500">
@@ -691,7 +691,7 @@ const confirmOffer = async () => {
                                     type="button"
                                     :disabled="confirming || ! offer.can_confirm || ! confirmationConsent"
                                     @click="confirmOffer"
-                                    class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-indigo-400"
+                                    class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#d9bf8c] px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-[#c4a875] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c] focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#d9bf8c]/40"
                                 >
                                     <svg
                                         v-if="confirming"
@@ -721,7 +721,7 @@ const confirmOffer = async () => {
                             <h3 class="text-lg font-semibold text-gray-900">Nächste Schritte</h3>
                             <ul class="mt-4 space-y-3 text-sm text-gray-600">
                                 <li class="flex items-start gap-3">
-                                    <span class="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-xs font-semibold text-indigo-600">
+                                    <span class="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-xs font-semibold text-[#d9bf8c]">
                                         1
                                     </span>
                                     <span>
@@ -729,7 +729,7 @@ const confirmOffer = async () => {
                                     </span>
                                 </li>
                                 <li class="flex items-start gap-3">
-                                    <span class="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-xs font-semibold text-indigo-600">
+                                    <span class="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-xs font-semibold text-[#d9bf8c]">
                                         2
                                     </span>
                                     <span>
@@ -737,7 +737,7 @@ const confirmOffer = async () => {
                                     </span>
                                 </li>
                                 <li class="flex items-start gap-3">
-                                    <span class="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-xs font-semibold text-indigo-600">
+                                    <span class="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-xs font-semibold text-[#d9bf8c]">
                                         3
                                     </span>
                                     <span>
@@ -747,7 +747,7 @@ const confirmOffer = async () => {
                             </ul>
                         </div>
 
-                        <div class="rounded-3xl bg-indigo-50 p-6 text-sm text-indigo-900">
+                        <div class="rounded-3xl bg-[#d9bf8c]/10 p-6 text-sm text-indigo-900">
                             <h3 class="text-lg font-semibold text-indigo-900">Sie haben Fragen?</h3>
                             <p class="mt-2">
                                 Unser Expertenteam unterstützt Sie persönlich bei allen Anliegen rund um Ihr Gutachten.
@@ -755,11 +755,11 @@ const confirmOffer = async () => {
                             <p class="mt-4 font-semibold">
                                 Ansprechpartner: {{ supportName }}<br>
                                 Telefon:
-                                <a :href="`tel:${supportPhoneHref}`" class="text-indigo-600">
+                                <a :href="`tel:${supportPhoneHref}`" class="text-[#d9bf8c]">
                                     {{ supportPhoneDisplay }}
                                 </a><br>
                                 E-Mail:
-                                <a :href="`mailto:${supportEmail}`" class="text-indigo-600">
+                                <a :href="`mailto:${supportEmail}`" class="text-[#d9bf8c]">
                                     {{ supportEmail }}
                                 </a>
                             </p>

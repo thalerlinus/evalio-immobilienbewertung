@@ -382,22 +382,65 @@ const submit = async () => {
         :can-login="canLogin"
         :can-register="canRegister"
     >
-        <section class="bg-slate-900 py-16 text-white">
-            <div class="mx-auto flex max-w-5xl flex-col gap-6 px-4 text-center">
-                <span class="mx-auto rounded-full bg-slate-800 px-4 py-1 text-sm uppercase tracking-widest text-slate-300">
-                    Restnutzungsdauer & AfA ermitteln
-                </span>
-                <h1 class="text-3xl font-bold md:text-5xl">
-                    Evalio Immobilien-Rechner
+        <section class="relative overflow-hidden bg-gradient-to-br from-slate-800 via-slate-900 to-black py-20 text-white md:py-28">
+            <!-- Dekorative Elemente -->
+            <div class="absolute inset-0 overflow-hidden">
+                <div class="absolute -left-4 top-0 h-72 w-72 rounded-full bg-[#d9bf8c]/20 blur-3xl"></div>
+                <div class="absolute -right-4 bottom-0 h-96 w-96 rounded-full bg-[#d9bf8c]/20 blur-3xl"></div>
+                <div class="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#d9bf8c]/10 blur-3xl"></div>
+            </div>
+
+            <div class="relative mx-auto flex max-w-5xl flex-col gap-8 px-4 text-center">
+                <!-- Badge -->
+                <div class="mx-auto inline-flex items-center gap-2 rounded-full bg-[#d9bf8c]/10 px-4 py-2 backdrop-blur-sm ring-1 ring-[#d9bf8c]/30">
+                    <svg class="h-4 w-4 text-[#d9bf8c]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span class="text-sm font-semibold uppercase tracking-wide text-[#d9bf8c]">
+                        Professionelle Immobilienbewertung
+                    </span>
+                </div>
+
+                <!-- Hauptüberschrift -->
+                <h1 class="text-4xl font-extrabold leading-tight md:text-6xl lg:text-7xl">
+                    <span class="block">Restnutzungsdauer &</span>
+                    <span class="block bg-gradient-to-r from-[#d9bf8c] to-[#c4a875] bg-clip-text text-transparent">
+                        AfA-Satz berechnen
+                    </span>
                 </h1>
-                <p class="text-lg text-slate-200 md:text-xl">
-                    Erfassen Sie Objekt- und Sanierungsdaten, berechnen Sie die Restnutzungsdauer (RND), AfA-Satz
-                    und erhalten Sie eine Empfehlung für ein Gutachten – direkt im Browser.
+
+                <!-- Beschreibung -->
+                <p class="mx-auto max-w-3xl text-lg leading-relaxed text-slate-300 md:text-xl">
+                    Ermitteln Sie in wenigen Minuten die Restnutzungsdauer (RND) und den AfA-Satz Ihrer Immobilie.
+                    Erfassen Sie Objektdaten, bewerten Sie durchgeführte Sanierungen und erhalten Sie eine fundierte
+                    Empfehlung – schnell, präzise und direkt online.
                 </p>
+
+                <!-- Feature-Liste -->
+                <div class="mx-auto mt-4 grid max-w-2xl gap-4 sm:grid-cols-3">
+                    <div class="flex flex-col items-center gap-2 rounded-xl bg-white/5 p-4 backdrop-blur-sm ring-1 ring-[#d9bf8c]/20">
+                        <svg class="h-8 w-8 text-[#d9bf8c]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        <span class="text-sm font-semibold text-white">Sofortige Berechnung</span>
+                    </div>
+                    <div class="flex flex-col items-center gap-2 rounded-xl bg-white/5 p-4 backdrop-blur-sm ring-1 ring-[#d9bf8c]/20">
+                        <svg class="h-8 w-8 text-[#d9bf8c]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                        <span class="text-sm font-semibold text-white">Rechtssicher</span>
+                    </div>
+                    <div class="flex flex-col items-center gap-2 rounded-xl bg-white/5 p-4 backdrop-blur-sm ring-1 ring-[#d9bf8c]/20">
+                        <svg class="h-8 w-8 text-[#d9bf8c]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        <span class="text-sm font-semibold text-white">Detaillierte Auswertung</span>
+                    </div>
+                </div>
             </div>
         </section>
 
-        <section class="bg-slate-100 py-12">
+        <section class="bg-gradient-to-b from-slate-50 to-white py-12">
             <div class="mx-auto max-w-4xl px-4">
                 <div class="w-full space-y-6">
                     <div>
@@ -422,7 +465,7 @@ const submit = async () => {
                                     </label>
                                     <select
                                         v-model="form.property_type_key"
-                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
                                     >
                                         <option disabled value="">
                                             Bitte wählen
@@ -479,7 +522,7 @@ const submit = async () => {
                                             v-model="form.baujahr"
                                             type="number"
                                             required
-                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
                                             placeholder="z. B. 1980"
                                         />
                                     </div>
@@ -491,7 +534,7 @@ const submit = async () => {
                                             v-model="form.anschaffungsjahr"
                                             type="number"
                                             required
-                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
                                             placeholder="z. B. 2020"
                                         />
                                     </div>
@@ -503,7 +546,7 @@ const submit = async () => {
                                             v-model="form.steuerjahr"
                                             type="number"
                                             required
-                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
                                             placeholder="z. B. 2025"
                                         />
                                     </div>
@@ -511,7 +554,7 @@ const submit = async () => {
                                         <label class="block text-sm font-medium text-slate-700">Bauweise</label>
                                         <select
                                             v-model="form.bauweise"
-                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
                                         >
                                             <option value="massiv">Massivbauweise</option>
                                             <option value="holz">Holzbauweise</option>
@@ -523,7 +566,7 @@ const submit = async () => {
                                             id="eigennutzung"
                                             v-model="form.eigennutzung"
                                             type="checkbox"
-                                            class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                            class="h-4 w-4 rounded border-slate-300 text-[#d9bf8c] focus:ring-[#d9bf8c]"
                                         />
                                         <label for="eigennutzung" class="text-sm font-medium text-slate-700">
                                             Eigennutzung
@@ -549,7 +592,7 @@ const submit = async () => {
                                     <input
                                         v-model="form.address.street"
                                         type="text"
-                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
                                     />
                                 </div>
                                 <div>
@@ -557,7 +600,7 @@ const submit = async () => {
                                     <input
                                         v-model="form.address.zip"
                                         type="text"
-                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
                                     />
                                 </div>
                                 <div>
@@ -565,7 +608,7 @@ const submit = async () => {
                                     <input
                                         v-model="form.address.city"
                                         type="text"
-                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
                                     />
                                 </div>
                                 <div>
@@ -574,7 +617,7 @@ const submit = async () => {
                                         v-model="form.address.country"
                                         type="text"
                                         maxlength="2"
-                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm uppercase focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm uppercase focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
                                     />
                                 </div>
                             </div>
@@ -613,7 +656,7 @@ const submit = async () => {
                                             :min="0"
                                             :max="100"
                                             :step="20"
-                                            class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                                            class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#d9bf8c]"
                                         />
                                         <div class="flex justify-between text-xs text-slate-500">
                                             <span>0%</span>
@@ -630,7 +673,7 @@ const submit = async () => {
                                     </label>
                                     <select
                                         v-model="form.renovations[index].time_window_key"
-                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
                                     >
                                         <option
                                             v-for="option in timeWindowOptions"
@@ -672,7 +715,7 @@ const submit = async () => {
                                         type="text"
                                         required
                                         autocomplete="name"
-                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
                                         placeholder="Max Mustermann"
                                     />
                                     <p
@@ -692,7 +735,7 @@ const submit = async () => {
                                         type="email"
                                         required
                                         autocomplete="email"
-                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
                                         placeholder="name@example.de"
                                     />
                                     <p
@@ -712,7 +755,7 @@ const submit = async () => {
                                         type="tel"
                                         inputmode="tel"
                                         autocomplete="tel"
-                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
                                         placeholder="z. B. +49 171 1234567"
                                     />
                                     <p
@@ -743,7 +786,7 @@ const submit = async () => {
                                         v-model="form.acceptTerms"
                                         type="checkbox"
                                         required
-                                        class="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                        class="mt-1 h-4 w-4 rounded border-slate-300 text-[#d9bf8c] focus:ring-[#d9bf8c]"
                                     />
                                     <span class="space-y-2 leading-snug">
                                         <span class="block">
@@ -795,7 +838,7 @@ const submit = async () => {
                             <button
                                 type="submit"
                                 :disabled="submitting || isRequestOnlyProperty || !form.acceptTerms || !form.property_type_key"
-                                class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-6 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-blue-400 disabled:hover:bg-blue-400"
+                                class="inline-flex items-center justify-center rounded-lg bg-[#d9bf8c] px-6 py-2 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-[#c4a875] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c] focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#d9bf8c]/40 disabled:hover:bg-[#d9bf8c]/40"
                             >
                                 <svg
                                     v-if="submitting"
