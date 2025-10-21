@@ -66,9 +66,14 @@ const addressInputs = computed(() => offer.value.form_inputs?.address ?? {});
 const contactInputs = computed(() => offer.value.form_inputs?.contact ?? {});
 const renovationInputs = computed(() => offer.value.form_inputs?.renovations ?? []);
 const notes = computed(() => offer.value.form_inputs?.notes ?? null);
+const customerData = computed(() => offer.value.customer ?? {});
 
 const hasAddress = computed(() =>
     Object.values(addressInputs.value ?? {}).some((value) => value && String(value).trim() !== '')
+);
+
+const hasBillingAddress = computed(() => 
+    customerData.value?.billing_street || customerData.value?.billing_zip || customerData.value?.billing_city
 );
 
 const hasRenovations = computed(() => (renovationInputs.value ?? []).length > 0);
@@ -154,16 +159,27 @@ const formatTimeWindow = (key) => {
     return timeWindowLabels[key] ?? key;
 };
 
+const extentLabels = {
+    0: 'Nicht durchgeführt',
+    20: 'Nur Ausbesserungsarbeiten',
+    40: 'Vereinzelte Maßnahmen',
+    60: 'Teilweise erneuert',
+    80: 'Überwiegend erneuert',
+    100: 'Vollständig saniert'
+};
+
 const formatExtentPercent = (value) => {
     if (value === null || value === undefined) {
         return '—';
     }
 
-    if (Number(value) === 0) {
+    const numValue = Number(value);
+    
+    if (numValue === 0) {
         return 'Keine Sanierung';
     }
 
-    return `${value} %`;
+    return extentLabels[numValue] || `${value} %`;
 };
 
 const phoneHref = (value) => {
@@ -363,6 +379,20 @@ const confirmOffer = async () => {
                                 Basierend auf Ihrer Berechnung mit unserem RND-Kalkulator.
                             </p>
 
+                            <!-- Immobilien-Adresse -->
+                            <div v-if="hasAddress" class="mt-6 rounded-2xl bg-gradient-to-br from-[#d9bf8c]/10 to-[#d9bf8c]/5 p-6 border border-[#d9bf8c]/20">
+                                <h3 class="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-[#d9bf8c]">
+                                        <path fill-rule="evenodd" d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 103 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 002.273 1.765 11.842 11.842 0 00.976.544l.062.029.018.008.006.003zM10 11.25a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z" clip-rule="evenodd" />
+                                    </svg>
+                                    Objektadresse
+                                </h3>
+                                <p class="mt-2 text-base font-medium text-gray-900">
+                                    {{ addressInputs.street || '—' }}<br>
+                                    {{ addressInputs.zip || '—' }} {{ addressInputs.city || '—' }}
+                                </p>
+                            </div>
+
                             <dl class="mt-8 grid gap-6 sm:grid-cols-2">
                                 <div>
                                     <dt class="text-sm font-medium text-gray-500">Immobilienart</dt>
@@ -547,39 +577,30 @@ const confirmOffer = async () => {
                                     </dl>
                                 </section>
 
-                                <section>
+                                <section v-if="hasBillingAddress">
                                     <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                        Adresse
+                                        Rechnungsadresse
                                     </h3>
-                                    <dl v-if="hasAddress" class="mt-3 grid gap-4 text-sm text-gray-600 sm:grid-cols-2">
-                                        <div>
+                                    <dl class="mt-3 grid gap-4 text-sm text-gray-600 sm:grid-cols-2">
+                                        <div class="sm:col-span-2">
                                             <dt class="font-medium text-gray-500">Straße</dt>
                                             <dd class="mt-1 font-semibold text-gray-900">
-                                                {{ formatOptional(addressInputs.street) }}
+                                                {{ formatOptional(customerData.billing_street) }}
                                             </dd>
                                         </div>
                                         <div>
                                             <dt class="font-medium text-gray-500">PLZ</dt>
                                             <dd class="mt-1 font-semibold text-gray-900">
-                                                {{ formatOptional(addressInputs.zip) }}
+                                                {{ formatOptional(customerData.billing_zip) }}
                                             </dd>
                                         </div>
                                         <div>
                                             <dt class="font-medium text-gray-500">Ort</dt>
                                             <dd class="mt-1 font-semibold text-gray-900">
-                                                {{ formatOptional(addressInputs.city) }}
-                                            </dd>
-                                        </div>
-                                        <div>
-                                            <dt class="font-medium text-gray-500">Land</dt>
-                                            <dd class="mt-1 font-semibold text-gray-900 uppercase">
-                                                {{ formatOptional(addressInputs.country) }}
+                                                {{ formatOptional(customerData.billing_city) }}
                                             </dd>
                                         </div>
                                     </dl>
-                                    <p v-else class="mt-3 text-sm text-gray-400">
-                                        Keine Adressangaben erfasst.
-                                    </p>
                                 </section>
 
                                 <section v-if="hasRenovations">

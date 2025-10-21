@@ -39,6 +39,7 @@ const submitting = ref(false);
 const result = ref(null);
 const offer = ref(null);
 const errors = reactive({});
+const currentStep = ref(1);
 
 const defaultRenovations = () =>
     props.renovationCategories.map((category) => ({
@@ -49,12 +50,14 @@ const defaultRenovations = () =>
 
 const form = reactive({
     property_type_key: '',
+    property_type_category: '', // 'mfh' oder 'wgh' für Mehrfamilien-/Wohn-Geschäftshäuser
+    unit_count: null, // Anzahl der Wohneinheiten
     gnd_override: '',
     baujahr: '',
     anschaffungsjahr: '',
     steuerjahr: '',
     bauweise: 'massiv',
-    eigennutzung: false,
+    eigennutzung: true,
     renovations: defaultRenovations(),
     address: {
         street: '',
@@ -66,6 +69,11 @@ const form = reactive({
         name: '',
         email: '',
         phone: '',
+    },
+    billing_address: {
+        street: '',
+        zip: '',
+        city: '',
     },
     acceptTerms: false,
 });
@@ -86,9 +94,82 @@ const extentWeightMap = computed(() => {
     return map;
 });
 
+// Zeitfenster-Optionen in logischer Reihenfolge
+const timeWindowOptionsOrdered = computed(() => [
+    { key: 'nicht', label: 'Nicht durchgeführt / Weiß nicht', needsExtent: false },
+    { key: 'weiss_nicht', label: 'Weiß nicht wann', needsExtent: false },
+    { key: 'bis_5', label: 'In den letzten 5 Jahren', needsExtent: true },
+    { key: 'bis_10', label: 'Vor 5-10 Jahren', needsExtent: true },
+    { key: 'bis_15', label: 'Vor 10-15 Jahren', needsExtent: true },
+    { key: 'bis_20', label: 'Vor 15-20 Jahren', needsExtent: true },
+    { key: 'ueber_20', label: 'Vor über 20 Jahren', needsExtent: true },
+]);
+
+// Umfang-Labels für den Slider
+const extentLabels = {
+    20: 'Nur Ausbesserungsarbeiten',
+    40: 'Vereinzelte Maßnahmen',
+    60: 'Teilweise erneuert',
+    80: 'Überwiegend erneuert',
+    100: 'Vollständig saniert'
+};
+
+const getExtentLabel = (percent) => {
+    return extentLabels[percent] || `${percent}%`;
+};
+
 const selectedPropertyType = computed(() =>
     props.propertyTypes.find((type) => type.key === form.property_type_key) ?? null,
 );
+
+// Gruppierte Property Types für die Anzeige
+const displayPropertyTypes = computed(() => {
+    return [
+        { key: 'eigentumswohnung', label: 'Eigentumswohnung', category: 'single' },
+        { key: 'einfamilienhaus', label: 'Einfamilienhaus', category: 'single' },
+        { key: 'zweifamilienhaus', label: 'Zweifamilienhaus', category: 'single' },
+        { key: 'dreifamilienhaus', label: 'Dreifamilienhaus', category: 'single' },
+        { key: 'mfh', label: 'Mehrfamilienhaus', category: 'multi' },
+        { key: 'wgh', label: 'Wohn- und Geschäftshaus', category: 'multi' },
+        { key: 'gewerbeobjekt', label: 'Gewerbeobjekt', category: 'single' },
+        { key: 'sonstiges', label: 'Sonstiges', category: 'single' },
+    ];
+});
+
+// Watch für automatische property_type_key Selektion bei MFH/WGH
+watch([() => form.property_type_category, () => form.unit_count], ([category, count]) => {
+    if (!category || category === 'single') {
+        return;
+    }
+    
+    if (!count || count < 4) {
+        form.property_type_key = '';
+        return;
+    }
+    
+    if (category === 'mfh') {
+        form.property_type_key = count <= 10 ? 'mfh_4_10' : 'mfh_10_plus';
+    } else if (category === 'wgh') {
+        form.property_type_key = count <= 10 ? 'wgh_10_minus' : 'wgh_10_plus';
+    }
+});
+
+const selectPropertyCategory = (categoryKey) => {
+    if (categoryKey === 'mfh' || categoryKey === 'wgh') {
+        form.property_type_category = categoryKey;
+        form.unit_count = null;
+        form.property_type_key = '';
+    } else {
+        form.property_type_category = 'single';
+        form.property_type_key = categoryKey;
+        form.unit_count = null;
+    }
+};
+
+const needsExtentInput = (timeWindowKey) => {
+    const option = timeWindowOptionsOrdered.value.find(opt => opt.key === timeWindowKey);
+    return option ? option.needsExtent : false;
+};
 
 const isRequestOnlyProperty = computed(() => Boolean(selectedPropertyType.value?.request_only));
 
@@ -168,12 +249,14 @@ const clearErrors = () => {
 
 const resetForm = () => {
     form.property_type_key = props.propertyTypes[0]?.key ?? '';
+    form.property_type_category = 'single';
+    form.unit_count = null;
     form.gnd_override = '';
     form.baujahr = '';
     form.anschaffungsjahr = '';
     form.steuerjahr = '';
     form.bauweise = 'massiv';
-    form.eigennutzung = false;
+    form.eigennutzung = true;
     form.renovations = defaultRenovations();
     form.address = {
         street: '',
@@ -189,7 +272,84 @@ const resetForm = () => {
     form.acceptTerms = false;
     result.value = null;
     offer.value = null;
+    currentStep.value = 1;
     clearErrors();
+};
+
+const goToNextStep = () => {
+    clearErrors();
+    
+    if (currentStep.value === 1) {
+        // Validierung für Schritt 1
+        if (!form.property_type_key) {
+            errors.property_type_key = ['Bitte wählen Sie eine Immobilienart aus.'];
+            return;
+        }
+        // Bei MFH/WGH: Validierung der Wohnungsanzahl
+        if ((form.property_type_category === 'mfh' || form.property_type_category === 'wgh') && !form.unit_count) {
+            errors.unit_count = ['Bitte geben Sie die Anzahl der Wohneinheiten an.'];
+            return;
+        }
+        if ((form.property_type_category === 'mfh' || form.property_type_category === 'wgh') && form.unit_count < 4) {
+            errors.unit_count = ['Ein Mehrfamilienhaus muss mindestens 4 Wohneinheiten haben.'];
+            return;
+        }
+        if (isRequestOnlyProperty.value) {
+            errors.general = [
+                `${requestOnlyHeadline.value}. ${requestOnlyMessage.value}`,
+            ];
+            return;
+        }
+        if (!form.baujahr) {
+            errors.baujahr = ['Bitte geben Sie ein gültiges Baujahr ein.'];
+            return;
+        }
+        if (!form.anschaffungsjahr) {
+            errors.anschaffungsjahr = ['Bitte geben Sie ein gültiges Anschaffungsjahr ein.'];
+            return;
+        }
+        if (!form.steuerjahr) {
+            errors.steuerjahr = ['Bitte geben Sie ein gültiges Steuerjahr ein.'];
+            return;
+        }
+        // Adresse validieren
+        if (!form.address.street || form.address.street.trim() === '') {
+            errors['address.street'] = ['Bitte geben Sie eine Straße ein.'];
+            return;
+        }
+        if (!form.address.zip || form.address.zip.trim() === '') {
+            errors['address.zip'] = ['Bitte geben Sie eine Postleitzahl ein.'];
+            return;
+        }
+        // PLZ-Format prüfen: muss genau 5 Ziffern sein
+        if (!/^\d{5}$/.test(form.address.zip.trim())) {
+            errors['address.zip'] = ['Die Postleitzahl muss genau 5 Ziffern enthalten.'];
+            return;
+        }
+        if (!form.address.city || form.address.city.trim() === '') {
+            errors['address.city'] = ['Bitte geben Sie einen Ort ein.'];
+            return;
+        }
+    }
+    
+    if (currentStep.value === 2) {
+        // Validierung für Schritt 2 (Sanierungen) - keine spezifische Validierung nötig
+        // Sanierungen sind optional
+    }
+    
+    if (currentStep.value < 3) {
+        currentStep.value++;
+        // Nach oben scrollen
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+};
+
+const goToPreviousStep = () => {
+    clearErrors();
+    if (currentStep.value > 1) {
+        currentStep.value--;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 };
 
 const formatNumber = (value, fractionDigits = 2) => {
@@ -244,7 +404,7 @@ const validationMessageMap = {
     gnd_override: 'Die optionale Gesamtnutzungsdauer muss zwischen 1 und 200 Jahren liegen.',
     baujahr: 'Bitte geben Sie ein gültiges Baujahr ein.',
     anschaffungsjahr: 'Bitte geben Sie ein gültiges Anschaffungsjahr ein (mindestens Baujahr).',
-    steuerjahr: 'Bitte geben Sie ein gültiges Steuerjahr ein (mindestens Anschaffungsjahr).',
+    steuerjahr: 'Bitte geben Sie ein gültiges Steuerjahr ein (mindestens Baujahr).',
     bauweise: 'Bitte wählen Sie eine gültige Bauweise aus.',
     eigennutzung: 'Bitte geben Sie an, ob Eigennutzung vorliegt.',
     'contact.email': 'Bitte geben Sie eine gültige E-Mail-Adresse ein.',
@@ -256,6 +416,9 @@ const validationMessageMap = {
     'address.zip': 'Die Postleitzahl darf höchstens 20 Zeichen enthalten.',
     'address.city': 'Der Ort darf höchstens 255 Zeichen enthalten.',
     'address.country': 'Bitte geben Sie ein gültiges Länderkürzel an.',
+    'billing_address.street': 'Bitte geben Sie die Straße und Hausnummer Ihrer Rechnungsadresse ein.',
+    'billing_address.zip': 'Bitte geben Sie eine gültige 5-stellige Postleitzahl ein.',
+    'billing_address.city': 'Bitte geben Sie die Stadt Ihrer Rechnungsadresse ein.',
     accept_terms: 'Bitte bestätigen Sie die Datenschutzhinweise, bevor Sie fortfahren.',
 };
 
@@ -327,6 +490,11 @@ const submit = async () => {
             name: form.contact.name || null,
             email: form.contact.email || null,
             phone: form.contact.phone || null,
+        },
+        billing_address: {
+            street: form.billing_address.street || null,
+            zip: form.billing_address.zip || null,
+            city: form.billing_address.city || null,
         },
     };
 
@@ -441,7 +609,7 @@ const submit = async () => {
         </section>
 
         <section class="bg-gradient-to-b from-slate-50 to-white py-12">
-            <div class="mx-auto max-w-4xl px-4">
+            <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
                 <div class="w-full space-y-6">
                     <div>
                         <h2 class="text-2xl font-semibold text-slate-900">
@@ -449,381 +617,617 @@ const submit = async () => {
                         </h2>
                     </div>
 
+                    <!-- Fortschrittsanzeige -->
+                    <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+                        <div class="flex items-center justify-between">
+                            <div class="flex flex-1 items-center">
+                                <div class="flex items-center">
+                                    <div
+                                        class="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold"
+                                        :class="currentStep >= 1 ? 'bg-[#d9bf8c] text-slate-900' : 'bg-slate-200 text-slate-500'"
+                                    >
+                                        1
+                                    </div>
+                                    <div class="ml-3 text-sm">
+                                        <div class="font-semibold" :class="currentStep >= 1 ? 'text-slate-900' : 'text-slate-500'">
+                                            Objektinformationen
+                                        </div>
+                                        <div class="text-xs text-slate-500">Immobilienart & Adresse</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mx-4 h-px flex-1 bg-slate-300"></div>
+                            <div class="flex flex-1 items-center">
+                                <div class="flex items-center">
+                                    <div
+                                        class="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold"
+                                        :class="currentStep >= 2 ? 'bg-[#d9bf8c] text-slate-900' : 'bg-slate-200 text-slate-500'"
+                                    >
+                                        2
+                                    </div>
+                                    <div class="ml-3 text-sm">
+                                        <div class="font-semibold" :class="currentStep >= 2 ? 'text-slate-900' : 'text-slate-500'">
+                                            Zustandsbewertung
+                                        </div>
+                                        <div class="text-xs text-slate-500">Sanierungen</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mx-4 h-px flex-1 bg-slate-300"></div>
+                            <div class="flex flex-1 items-center">
+                                <div class="flex items-center">
+                                    <div
+                                        class="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold"
+                                        :class="currentStep >= 3 ? 'bg-[#d9bf8c] text-slate-900' : 'bg-slate-200 text-slate-500'"
+                                    >
+                                        3
+                                    </div>
+                                    <div class="ml-3 text-sm">
+                                        <div class="font-semibold" :class="currentStep >= 3 ? 'text-slate-900' : 'text-slate-500'">
+                                            Kontaktdaten
+                                        </div>
+                                        <div class="text-xs text-slate-500">Abschluss</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <form
                         @submit.prevent="submit"
                         class="space-y-8"
                         :aria-busy="submitting"
                     >
-                        <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-                            <h3 class="mb-4 text-lg font-semibold text-slate-900">
-                                Objektinformationen
-                            </h3>
-                            <div class="grid gap-4 md:grid-cols-2">
-                                <div class="md:col-span-2">
-                                    <label class="block text-sm font-medium text-slate-700">
-                                        Immobilienart <span class="text-red-600">*</span>
-                                    </label>
-                                    <select
-                                        v-model="form.property_type_key"
-                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
-                                    >
-                                        <option disabled value="">
-                                            Bitte wählen
-                                        </option>
-                                        <option
-                                            v-for="type in propertyTypes"
-                                            :key="type.key"
-                                            :value="type.key"
-                                        >
-                                            {{ type.label }}
-                                        </option>
-                                    </select>
-                                    <p
-                                        v-if="selectedPropertyType && !isRequestOnlyProperty"
-                                        class="mt-2 text-sm text-slate-500"
-                                    >
-                                        Gesamtnutzungsdauer: <strong>{{ selectedPropertyType.gnd ?? '—' }} Jahre</strong>
-                                        • Standardpreis: <strong>
-                                            {{
-                                                selectedPropertyType.price_standard_eur
-                                                    ? formatCurrency(selectedPropertyType.price_standard_eur)
-                                                    : 'auf Anfrage'
-                                            }}
-                                        </strong>
-                                    </p>
-                                    <div
-                                        v-else-if="selectedPropertyType && isRequestOnlyProperty"
-                                        class="mt-3 rounded-xl border-2 border-red-500 bg-red-50 p-4 text-sm text-red-700"
-                                    >
-                                        <span class="block text-base font-semibold text-red-700">
-                                            {{ requestOnlyHeadline }}
-                                        </span>
-                                        <span class="mt-2 block text-sm text-red-700">
-                                            {{ requestOnlyMessage }}
-                                        </span>
-                                        <span class="mt-4 block text-sm text-red-700">
-                                            Ansprechpartner: {{ supportName }} · Telefon:
-                                            <a :href="`tel:${supportPhoneHref}`" class="font-semibold underline decoration-red-400">
-                                                {{ supportPhoneDisplay }}
-                                            </a>
-                                            · E-Mail:
-                                            <a :href="`mailto:${supportEmail}`" class="font-semibold underline decoration-red-400">
-                                                {{ supportEmail }}
-                                            </a>
-                                        </span>
-                                    </div>
-                                </div>
-                                <template v-if="!isRequestOnlyProperty">
-                                    <div>
-                                        <label class="block text-sm font-medium text-slate-700">
-                                            Baujahr <span class="text-red-600">*</span>
-                                        </label>
-                                        <input
-                                            v-model="form.baujahr"
-                                            type="number"
-                                            required
-                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
-                                            placeholder="z. B. 1980"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-slate-700">
-                                            Anschaffungsjahr <span class="text-red-600">*</span>
-                                        </label>
-                                        <input
-                                            v-model="form.anschaffungsjahr"
-                                            type="number"
-                                            required
-                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
-                                            placeholder="z. B. 2020"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-slate-700">
-                                            Steuerjahr <span class="text-red-600">*</span>
-                                        </label>
-                                        <input
-                                            v-model="form.steuerjahr"
-                                            type="number"
-                                            required
-                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
-                                            placeholder="z. B. 2025"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-slate-700">Bauweise</label>
-                                        <select
-                                            v-model="form.bauweise"
-                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
-                                        >
-                                            <option value="massiv">Massivbauweise</option>
-                                            <option value="holz">Holzbauweise</option>
-                                            <option value="unbekannt">Unbekannt</option>
-                                        </select>
-                                    </div>
-                                    <div class="flex items-center gap-2 pt-6">
-                                        <input
-                                            id="eigennutzung"
-                                            v-model="form.eigennutzung"
-                                            type="checkbox"
-                                            class="h-4 w-4 rounded border-slate-300 text-[#d9bf8c] focus:ring-[#d9bf8c]"
-                                        />
-                                        <label for="eigennutzung" class="text-sm font-medium text-slate-700">
-                                            Eigennutzung
-                                        </label>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-
-                        <div
-                            v-if="!isRequestOnlyProperty"
-                            class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200"
-                        >
-                            <h3 class="mb-4 text-lg font-semibold text-slate-900">
-                                Adresse (optional)
-                            </h3>
-                            <p class="mb-4 text-xs text-slate-500">
-                                Hinweis: Diese Angaben beziehen sich auf die Adresse der Immobilie (Objektadresse).
-                            </p>
-                            <div class="grid gap-4 md:grid-cols-2">
-                                <div class="md:col-span-2">
-                                    <label class="block text-sm font-medium text-slate-700">Straße</label>
-                                    <input
-                                        v-model="form.address.street"
-                                        type="text"
-                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
-                                    />
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700">PLZ</label>
-                                    <input
-                                        v-model="form.address.zip"
-                                        type="text"
-                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
-                                    />
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700">Ort</label>
-                                    <input
-                                        v-model="form.address.city"
-                                        type="text"
-                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
-                                    />
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700">Land</label>
-                                    <input
-                                        v-model="form.address.country"
-                                        type="text"
-                                        maxlength="2"
-                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm uppercase focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div
-                            v-if="!isRequestOnlyProperty"
-                            class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200"
-                        >
-                            <div class="mb-4">
-                                <h3 class="text-lg font-semibold text-slate-900">
-                                    Sanierungen & Zustandsbewertung
+                        <!-- Schritt 1: Objektinformationen & Adresse -->
+                        <div v-show="currentStep === 1" class="space-y-6">
+                            <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+                                <h3 class="mb-6 text-lg font-semibold text-slate-900">
+                                    Um welche Immobilienart handelt es sich? <span class="text-red-600">*</span>
                                 </h3>
+                                <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                                    <button
+                                        v-for="type in displayPropertyTypes"
+                                        :key="type.key"
+                                        type="button"
+                                        @click="selectPropertyCategory(type.key)"
+                                        class="group relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 p-4 transition-all hover:border-[#d9bf8c] hover:bg-[#d9bf8c]/5"
+                                        :class="{
+                                            'border-[#d9bf8c] bg-[#d9bf8c]/10 ring-2 ring-[#d9bf8c] ring-offset-2': 
+                                                (type.category === 'single' && form.property_type_key === type.key) ||
+                                                (type.category === 'multi' && form.property_type_category === type.key),
+                                            'border-slate-200': 
+                                                (type.category === 'single' && form.property_type_key !== type.key) &&
+                                                (type.category === 'multi' && form.property_type_category !== type.key)
+                                        }"
+                                    >
+                                        <!-- Icon Platzhalter - wird später durch echte Icons ersetzt -->
+                                        <div class="flex h-16 w-16 items-center justify-center rounded-lg bg-slate-100 transition-colors group-hover:bg-[#d9bf8c]/20"
+                                             :class="{ 
+                                                'bg-[#d9bf8c]/30': 
+                                                    (type.category === 'single' && form.property_type_key === type.key) ||
+                                                    (type.category === 'multi' && form.property_type_category === type.key)
+                                             }">
+                                            <svg class="h-10 w-10 text-slate-400 transition-colors group-hover:text-[#d9bf8c]"
+                                                 :class="{ 
+                                                    'text-[#d9bf8c]': 
+                                                        (type.category === 'single' && form.property_type_key === type.key) ||
+                                                        (type.category === 'multi' && form.property_type_category === type.key)
+                                                 }"
+                                                 fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                            </svg>
+                                        </div>
+                                        <span class="text-center text-xs font-medium text-slate-700 transition-colors group-hover:text-slate-900"
+                                              :class="{ 
+                                                'text-slate-900 font-semibold': 
+                                                    (type.category === 'single' && form.property_type_key === type.key) ||
+                                                    (type.category === 'multi' && form.property_type_category === type.key)
+                                              }">
+                                            {{ type.label }}
+                                        </span>
+                                        <!-- Checkmark für ausgewählte Option -->
+                                        <div v-if="(type.category === 'single' && form.property_type_key === type.key) || (type.category === 'multi' && form.property_type_category === type.key)" 
+                                             class="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-[#d9bf8c]">
+                                            <svg class="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        </div>
+                                    </button>
+                                </div>
+
+                                <!-- Wohnungsanzahl-Eingabe für MFH/WGH -->
+                                <div v-if="form.property_type_category === 'mfh' || form.property_type_category === 'wgh'" 
+                                     class="mt-6 rounded-xl border-2 border-[#d9bf8c] bg-[#d9bf8c]/5 p-5">
+                                    <label class="block text-sm font-medium text-slate-900 mb-2">
+                                        <span v-if="form.property_type_category === 'mfh'">Wie viele Wohneinheiten hat das Mehrfamilienhaus?</span>
+                                        <span v-else>Wie viele Einheiten hat das Wohn- und Geschäftshaus?</span>
+                                        <span class="text-red-600">*</span>
+                                    </label>
+                                    <input
+                                        v-model.number="form.unit_count"
+                                        type="number"
+                                        min="4"
+                                        required
+                                        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
+                                        :class="{ 'border-red-500': errors.unit_count?.length }"
+                                        :placeholder="form.property_type_category === 'mfh' ? 'z. B. 8' : 'z. B. 6'"
+                                    />
+                                    <p v-if="errors.unit_count?.length" class="mt-1 text-xs text-red-600">
+                                        {{ errors.unit_count[0] }}
+                                    </p>
+                                    <p v-else class="mt-2 text-xs text-slate-600">
+                                        <span v-if="form.property_type_category === 'mfh'">
+                                            Mehrfamilienhäuser haben mindestens 4 Wohneinheiten.
+                                        </span>
+                                        <span v-else>
+                                            Bitte geben Sie die Gesamtzahl aller Wohn- und Gewerbeeinheiten an.
+                                        </span>
+                                    </p>
+                                    <div v-if="form.unit_count && form.unit_count >= 4" class="mt-3 rounded-lg bg-blue-50 p-3 text-sm text-blue-800">
+                                        <strong v-if="form.unit_count <= 10">✓ Online-Ersteinschätzung möglich</strong>
+                                        <strong v-else>ℹ Für Objekte mit mehr als 10 Einheiten erstellen wir ein individuelles Angebot</strong>
+                                    </div>
+                                </div>
+                                
+                                <div
+                                    v-if="selectedPropertyType && isRequestOnlyProperty"
+                                    class="mt-4 rounded-xl border-2 border-red-500 bg-red-50 p-4 text-sm text-red-700"
+                                >
+                                    <span class="block text-base font-semibold text-red-700">
+                                        {{ requestOnlyHeadline }}
+                                    </span>
+                                    <span class="mt-2 block text-sm text-red-700">
+                                        {{ requestOnlyMessage }}
+                                    </span>
+                                    <span class="mt-4 block text-sm text-red-700">
+                                        Ansprechpartner: {{ supportName }} · Telefon:
+                                        <a :href="`tel:${supportPhoneHref}`" class="font-semibold underline decoration-red-400">
+                                            {{ supportPhoneDisplay }}
+                                        </a>
+                                        · E-Mail:
+                                        <a :href="`mailto:${supportEmail}`" class="font-semibold underline decoration-red-400">
+                                            {{ supportEmail }}
+                                        </a>
+                                    </span>
+                                </div>
+
+                                <div v-if="!isRequestOnlyProperty" class="mt-6 grid gap-4 md:grid-cols-2">
+                                    <div>
+                                            <label class="block text-sm font-medium text-slate-700">
+                                                Baujahr <span class="text-red-600">*</span>
+                                            </label>
+                                            <input
+                                                v-model="form.baujahr"
+                                                type="number"
+                                                min="300"
+                                                :max="new Date().getFullYear()"
+                                                required
+                                                class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
+                                                placeholder="z. B. 1980"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-slate-700">Bauweise</label>
+                                            <select
+                                                v-model="form.bauweise"
+                                                class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
+                                            >
+                                                <option value="massiv">Massivbauweise</option>
+                                                <option value="holz">Holzbauweise</option>
+                                                <option value="unbekannt">Unbekannt</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-slate-700">
+                                                Anschaffungsjahr <span class="text-red-600">*</span>
+                                            </label>
+                                            <input
+                                                v-model="form.anschaffungsjahr"
+                                                type="number"
+                                                min="300"
+                                                :max="new Date().getFullYear()"
+                                                required
+                                                class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
+                                                placeholder="z. B. 2020"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-slate-700">
+                                                Steuerjahr <span class="text-red-600">*</span>
+                                            </label>
+                                            <input
+                                                v-model="form.steuerjahr"
+                                                type="number"
+                                                min="300"
+                                                :max="new Date().getFullYear() + 1"
+                                                required
+                                                class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
+                                                placeholder="z. B. 2025"
+                                            />
+                                        </div>
+                                        <div class="md:col-span-2">
+                                            <label class="block text-sm font-medium text-slate-700 mb-3">
+                                                Wird die Immobilie eigengenutzt oder unentgeltlich überlassen? <span class="text-red-600">*</span>
+                                            </label>
+                                            <div class="flex gap-6">
+                                                <label class="flex items-center gap-2 cursor-pointer">
+                                                    <input
+                                                        id="eigennutzung-ja"
+                                                        v-model="form.eigennutzung"
+                                                        type="radio"
+                                                        :value="true"
+                                                        class="h-4 w-4 border-slate-300 text-[#d9bf8c] focus:ring-[#d9bf8c]"
+                                                    />
+                                                    <span class="text-sm text-slate-700">Ja</span>
+                                                </label>
+                                                <label class="flex items-center gap-2 cursor-pointer">
+                                                    <input
+                                                        id="eigennutzung-nein"
+                                                        v-model="form.eigennutzung"
+                                                        type="radio"
+                                                        :value="false"
+                                                        class="h-4 w-4 border-slate-300 text-[#d9bf8c] focus:ring-[#d9bf8c]"
+                                                    />
+                                                    <span class="text-sm text-slate-700">Nein</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                </div>
                             </div>
 
-                            <div class="grid gap-4 md:grid-cols-2">
-                                <div
-                                    v-for="(category, index) in renovationCategories"
-                                    :key="category.key"
-                                    class="rounded-xl border border-slate-200 p-4"
-                                >
-                                    <h4 class="mb-3 text-sm font-semibold text-slate-900">
-                                        {{ category.label }}
-                                    </h4>
-
-                                    <div class="space-y-2">
-                                        <label class="block text-xs font-medium text-slate-700">
-                                            Umfang: {{ form.renovations[index].extent_percent }}%
-                                            <span v-if="extentOptions.find(opt => opt.value === form.renovations[index].extent_percent)" class="text-slate-500">
-                                                ({{ extentOptions.find(opt => opt.value === form.renovations[index].extent_percent).label }})
-                                            </span>
+                            <div
+                                v-if="!isRequestOnlyProperty"
+                                class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200"
+                            >
+                                <h3 class="mb-4 text-lg font-semibold text-slate-900">
+                                    Adresse
+                                </h3>
+                                <p class="mb-4 text-xs text-slate-500">
+                                    Hinweis: Diese Angaben beziehen sich auf die Adresse der Immobilie (Objektadresse).
+                                </p>
+                                <div class="grid gap-4 md:grid-cols-2">
+                                    <div class="md:col-span-2">
+                                        <label class="block text-sm font-medium text-slate-700">
+                                            Straße <span class="text-red-600">*</span>
                                         </label>
                                         <input
-                                            type="range"
-                                            v-model.number="form.renovations[index].extent_percent"
-                                            :min="0"
-                                            :max="100"
-                                            :step="20"
-                                            class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#d9bf8c]"
+                                            v-model="form.address.street"
+                                            type="text"
+                                            required
+                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
+                                            :class="{ 'border-red-500': errors['address.street']?.length }"
+                                            placeholder="z. B. Musterstraße 123"
                                         />
-                                        <div class="flex justify-between text-xs text-slate-500">
-                                            <span>0%</span>
-                                            <span>20%</span>
-                                            <span>40%</span>
-                                            <span>60%</span>
-                                            <span>80%</span>
-                                            <span>100%</span>
-                                        </div>
-                                    </div>
-
-                                    <label class="mt-3 block text-xs font-medium text-slate-700">
-                                        Zeitpunkt
-                                    </label>
-                                    <select
-                                        v-model="form.renovations[index].time_window_key"
-                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
-                                    >
-                                        <option
-                                            v-for="option in timeWindowOptions"
-                                            :key="option.key"
-                                            :value="option.key"
+                                        <p
+                                            v-if="errors['address.street']?.length"
+                                            class="mt-1 text-xs text-red-600"
                                         >
-                                            {{ option.label }}
-                                        </option>
-                                    </select>
+                                            {{ errors['address.street'][0] }}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700">
+                                            PLZ <span class="text-red-600">*</span>
+                                        </label>
+                                        <input
+                                            v-model="form.address.zip"
+                                            type="text"
+                                            required
+                                            maxlength="5"
+                                            pattern="\d{5}"
+                                            inputmode="numeric"
+                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
+                                            :class="{ 'border-red-500': errors['address.zip']?.length }"
+                                            placeholder="z. B. 12345"
+                                        />
+                                        <p
+                                            v-if="errors['address.zip']?.length"
+                                            class="mt-1 text-xs text-red-600"
+                                        >
+                                            {{ errors['address.zip'][0] }}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700">
+                                            Ort <span class="text-red-600">*</span>
+                                        </label>
+                                        <input
+                                            v-model="form.address.city"
+                                            type="text"
+                                            required
+                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
+                                            :class="{ 'border-red-500': errors['address.city']?.length }"
+                                            placeholder="z. B. Berlin"
+                                        />
+                                        <p
+                                            v-if="errors['address.city']?.length"
+                                            class="mt-1 text-xs text-red-600"
+                                        >
+                                            {{ errors['address.city'][0] }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                                    <div class="mt-3 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
-                                        <div>Gewicht: {{ formatNumber(weightFor(form.renovations[index].extent_percent), 2) }}</div>
-                                        <div>
-                                            Zeitfaktor: {{ formatNumber(factorFor(category.key, form.renovations[index].time_window_key), 2) }}
+                        <!-- Schritt 2: Sanierungen & Zustandsbewertung -->
+                        <div v-show="currentStep === 2" class="space-y-6">
+                            <div
+                                v-if="!isRequestOnlyProperty"
+                                class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200"
+                            >
+                                <div class="mb-4">
+                                    <h3 class="text-lg font-semibold text-slate-900">
+                                        Sanierungen & Zustandsbewertung
+                                    </h3>
+                                </div>
+
+                                <div class="grid gap-4 md:grid-cols-2">
+                                    <div
+                                        v-for="(category, index) in renovationCategories"
+                                        :key="category.key"
+                                        class="rounded-xl border border-slate-200 p-4 sm:p-6"
+                                    >
+                                        <h4 class="mb-4 text-sm font-semibold text-slate-900">
+                                            {{ category.label }}
+                                        </h4>
+
+                                        <!-- Zeitpunkt als anklickbare Buttons -->
+                                        <div class="space-y-3">
+                                            <label class="block text-xs font-medium text-slate-700">
+                                                Zeitpunkt <span class="text-red-600">*</span>
+                                            </label>
+                                            <div class="grid grid-cols-1 gap-2">
+                                                <button
+                                                    v-for="option in timeWindowOptionsOrdered"
+                                                    :key="option.key"
+                                                    type="button"
+                                                    @click="form.renovations[index].time_window_key = option.key; form.renovations[index].extent_percent = option.needsExtent ? (form.renovations[index].extent_percent || 20) : 0"
+                                                    class="rounded-lg border-2 px-3 py-2 text-left text-xs font-medium transition-all"
+                                                    :class="{
+                                                        'border-[#d9bf8c] bg-[#d9bf8c]/10 text-slate-900': form.renovations[index].time_window_key === option.key,
+                                                        'border-slate-200 bg-white text-slate-600 hover:border-[#d9bf8c]/50 hover:bg-slate-50': form.renovations[index].time_window_key !== option.key
+                                                    }"
+                                                >
+                                                    {{ option.label }}
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div class="font-semibold text-slate-900">
-                                            Punkte: {{ formatNumber(categoryPoints(category, form.renovations[index]), 2) }}
+
+                                        <!-- Umfang (nur bei relevanten Zeitfenstern) -->
+                                        <div v-if="needsExtentInput(form.renovations[index].time_window_key)" class="mt-4 space-y-3">
+                                            <label class="block text-xs font-medium text-slate-700">
+                                                Umfang
+                                            </label>
+                                            <div class="rounded-lg bg-[#d9bf8c]/10 px-4 py-2 text-center text-sm font-semibold text-slate-900">
+                                                {{ getExtentLabel(form.renovations[index].extent_percent) }}
+                                            </div>
+                                            <input
+                                                type="range"
+                                                v-model.number="form.renovations[index].extent_percent"
+                                                :min="20"
+                                                :max="100"
+                                                :step="20"
+                                                class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#d9bf8c] px-0"
+                                            />
+                                            <div class="hidden sm:grid sm:grid-cols-5 gap-1 text-xs text-slate-500">
+                                                <span class="text-center leading-tight">Nur Aus­besserungen</span>
+                                                <span class="text-center leading-tight">Ver­einzelte Maß­nahmen</span>
+                                                <span class="text-center leading-tight">Teil­weise erneuert</span>
+                                                <span class="text-center leading-tight">Über­wiegend erneuert</span>
+                                                <span class="text-center leading-tight">Voll­ständig saniert</span>
+                                            </div>
+                                            <!-- Mobile Version mit kürzeren Texten -->
+                                            <div class="flex justify-between sm:hidden text-[10px] text-slate-500 -mx-1">
+                                                <span class="text-left leading-tight w-[18%]">Aus­bess.</span>
+                                                <span class="text-center leading-tight w-[18%]">Ver­einzelt</span>
+                                                <span class="text-center leading-tight w-[18%]">Teil­weise</span>
+                                                <span class="text-center leading-tight w-[18%]">Über­wieg.</span>
+                                                <span class="text-right leading-tight w-[18%]">Voll­ständig</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div
-                            v-if="!isRequestOnlyProperty"
-                            class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200"
-                        >
-                            <h3 class="mb-4 text-lg font-semibold text-slate-900">
-                                Ihre Kontaktdaten
-                            </h3>
-                            <div class="grid gap-4 md:grid-cols-2">
-                                <div class="md:col-span-2">
-                                    <label class="block text-sm font-medium text-slate-700" for="contact-name">
-                                        Name <span class="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        id="contact-name"
-                                        v-model.trim="form.contact.name"
-                                        type="text"
-                                        required
-                                        autocomplete="name"
-                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
-                                        placeholder="Max Mustermann"
-                                    />
-                                    <p
-                                        v-if="errors['contact.name']?.length"
-                                        class="mt-1 text-xs text-red-600"
-                                    >
-                                        {{ errors['contact.name'][0] }}
-                                    </p>
+                        <!-- Schritt 3: Kontaktdaten & Datenschutz -->
+                        <div v-show="currentStep === 3" class="space-y-6">
+                            <div
+                                v-if="!isRequestOnlyProperty"
+                                class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200"
+                            >
+                                <h3 class="mb-4 text-lg font-semibold text-slate-900">
+                                    Ihre Kontaktdaten
+                                </h3>
+                                <div class="grid gap-4 md:grid-cols-2">
+                                    <div class="md:col-span-2">
+                                        <label class="block text-sm font-medium text-slate-700" for="contact-name">
+                                            Name <span class="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            id="contact-name"
+                                            v-model.trim="form.contact.name"
+                                            type="text"
+                                            required
+                                            autocomplete="name"
+                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
+                                            placeholder="Max Mustermann"
+                                        />
+                                        <p
+                                            v-if="errors['contact.name']?.length"
+                                            class="mt-1 text-xs text-red-600"
+                                        >
+                                            {{ errors['contact.name'][0] }}
+                                        </p>
+                                    </div>
+                                    <div class="md:col-span-2">
+                                        <label class="block text-sm font-medium text-slate-700" for="contact-email">
+                                            E-Mail-Adresse <span class="text-red-600">*</span>
+                                        </label>
+                                        <input
+                                            id="contact-email"
+                                            v-model.trim="form.contact.email"
+                                            type="email"
+                                            required
+                                            autocomplete="email"
+                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
+                                            placeholder="name@example.de"
+                                        />
+                                        <p
+                                            v-if="errors['contact.email']?.length"
+                                            class="mt-1 text-xs text-red-600"
+                                        >
+                                            {{ errors['contact.email'][0] }}
+                                        </p>
+                                    </div>
+                                    <div class="md:col-span-2">
+                                        <label class="block text-sm font-medium text-slate-700" for="contact-phone">
+                                            Telefonnummer (optional)
+                                        </label>
+                                        <input
+                                            id="contact-phone"
+                                            v-model.trim="form.contact.phone"
+                                            type="tel"
+                                            inputmode="tel"
+                                            autocomplete="tel"
+                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
+                                            placeholder="z. B. +49 171 1234567"
+                                        />
+                                        <p
+                                            v-if="errors['contact.phone']?.length"
+                                            class="mt-1 text-xs text-red-600"
+                                        >
+                                            {{ errors['contact.phone'][0] }}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div class="md:col-span-2">
-                                    <label class="block text-sm font-medium text-slate-700" for="contact-email">
-                                        E-Mail-Adresse <span class="text-red-600">*</span>
-                                    </label>
-                                    <input
-                                        id="contact-email"
-                                        v-model.trim="form.contact.email"
-                                        type="email"
-                                        required
-                                        autocomplete="email"
-                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
-                                        placeholder="name@example.de"
-                                    />
-                                    <p
-                                        v-if="errors['contact.email']?.length"
-                                        class="mt-1 text-xs text-red-600"
-                                    >
-                                        {{ errors['contact.email'][0] }}
-                                    </p>
-                                </div>
-                                <div class="md:col-span-2">
-                                    <label class="block text-sm font-medium text-slate-700" for="contact-phone">
-                                        Telefonnummer (optional)
-                                    </label>
-                                    <input
-                                        id="contact-phone"
-                                        v-model.trim="form.contact.phone"
-                                        type="tel"
-                                        inputmode="tel"
-                                        autocomplete="tel"
-                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
-                                        placeholder="z. B. +49 171 1234567"
-                                    />
-                                    <p
-                                        v-if="errors['contact.phone']?.length"
-                                        class="mt-1 text-xs text-red-600"
-                                    >
-                                        {{ errors['contact.phone'][0] }}
-                                    </p>
+                                <p class="mt-4 text-xs text-slate-500">
+                                    Wir senden Ihnen das Ergebnis sowie ein individuelles Angebot unmittelbar per E-Mail zu.
+                                    Die Telefonnummer hilft uns bei Rückfragen, bleibt jedoch freiwillig.
+                                </p>
+                            </div>
+
+                            <div
+                                v-if="!isRequestOnlyProperty"
+                                class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200"
+                            >
+                                <h3 class="mb-4 text-lg font-semibold text-slate-900">
+                                    Rechnungsadresse
+                                </h3>
+                                <div class="grid gap-4 md:grid-cols-2">
+                                    <div class="md:col-span-2">
+                                        <label class="block text-sm font-medium text-slate-700">
+                                            Straße & Hausnummer <span class="text-red-600">*</span>
+                                        </label>
+                                        <input
+                                            v-model="form.billing_address.street"
+                                            type="text"
+                                            required
+                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
+                                            placeholder="z. B. Musterstraße 123"
+                                        />
+                                        <p
+                                            v-if="errors['billing_address.street']?.length"
+                                            class="mt-1 text-xs text-red-600"
+                                        >
+                                            {{ errors['billing_address.street'][0] }}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700">
+                                            PLZ <span class="text-red-600">*</span>
+                                        </label>
+                                        <input
+                                            v-model="form.billing_address.zip"
+                                            type="text"
+                                            required
+                                            pattern="[0-9]{5}"
+                                            maxlength="5"
+                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
+                                            placeholder="z. B. 12345"
+                                        />
+                                        <p
+                                            v-if="errors['billing_address.zip']?.length"
+                                            class="mt-1 text-xs text-red-600"
+                                        >
+                                            {{ errors['billing_address.zip'][0] }}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700">
+                                            Stadt <span class="text-red-600">*</span>
+                                        </label>
+                                        <input
+                                            v-model="form.billing_address.city"
+                                            type="text"
+                                            required
+                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
+                                            placeholder="z. B. Berlin"
+                                        />
+                                        <p
+                                            v-if="errors['billing_address.city']?.length"
+                                            class="mt-1 text-xs text-red-600"
+                                        >
+                                            {{ errors['billing_address.city'][0] }}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
-                            <p class="mt-4 text-xs text-slate-500">
-                                Wir senden Ihnen das Ergebnis sowie ein individuelles Angebot unmittelbar per E-Mail zu.
-                                Die Telefonnummer hilft uns bei Rückfragen, bleibt jedoch freiwillig.
-                            </p>
-                        </div>
 
-                        <div
-                            v-if="!isRequestOnlyProperty"
-                            class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200"
-                        >
-                            <h3 class="mb-4 text-lg font-semibold text-slate-900">
-                                Datenschutz & Zustimmung
-                            </h3>
-                            <div class="space-y-4 text-sm text-slate-700">
-                                <label class="flex items-start gap-3" for="accept-terms">
-                                    <input
-                                        id="accept-terms"
-                                        v-model="form.acceptTerms"
-                                        type="checkbox"
-                                        required
-                                        class="mt-1 h-4 w-4 rounded border-slate-300 text-[#d9bf8c] focus:ring-[#d9bf8c]"
-                                    />
-                                    <span class="space-y-2 leading-snug">
-                                        <span class="block">
-                                            Ich stimme zu, dass meine Angaben aus dem Formular zur Beantwortung meiner Anfrage verarbeitet und gespeichert werden.<span class="text-red-500">*</span>
+                            <div
+                                v-if="!isRequestOnlyProperty"
+                                class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200"
+                            >
+                                <h3 class="mb-4 text-lg font-semibold text-slate-900">
+                                    Datenschutz & Zustimmung
+                                </h3>
+                                <div class="space-y-4 text-sm text-slate-700">
+                                    <label class="flex items-start gap-3" for="accept-terms">
+                                        <input
+                                            id="accept-terms"
+                                            v-model="form.acceptTerms"
+                                            type="checkbox"
+                                            required
+                                            class="mt-1 h-4 w-4 rounded border-slate-300 text-[#d9bf8c] focus:ring-[#d9bf8c]"
+                                        />
+                                        <span class="space-y-2 leading-snug">
+                                            <span class="block">
+                                                Ich stimme zu, dass meine Angaben aus dem Formular zur Beantwortung meiner Anfrage verarbeitet und gespeichert werden.<span class="text-red-500">*</span>
+                                            </span>
+                                            <span class="block text-xs text-slate-600">
+                                                Hinweis: Sie können Ihre Einwilligung jederzeit für die Zukunft per E-Mail an
+                                                <a :href="`mailto:${supportEmail}`" class="text-blue-600 hover:underline">{{ supportEmail }}</a>
+                                                widerrufen.
+                                            </span>
+                                            <span class="block text-xs text-slate-600">
+                                                Weitere Informationen finden Sie in unserer
+                                                <a href="/datenschutzerklaerung" target="_blank" rel="noreferrer" class="text-blue-600 hover:underline">
+                                                    Datenschutzerklärung
+                                                </a>.
+                                            </span>
                                         </span>
-                                        <span class="block text-xs text-slate-600">
-                                            Hinweis: Sie können Ihre Einwilligung jederzeit für die Zukunft per E-Mail an
-                                            <a :href="`mailto:${supportEmail}`" class="text-blue-600 hover:underline">{{ supportEmail }}</a>
-                                            widerrufen.
-                                        </span>
-                                        <span class="block text-xs text-slate-600">
-                                            Weitere Informationen finden Sie in unserer
-                                            <a href="/datenschutzerklaerung" target="_blank" rel="noreferrer" class="text-blue-600 hover:underline">
-                                                Datenschutzerklärung
-                                            </a>.
-                                        </span>
-                                    </span>
-                                </label>
+                                    </label>
 
-                                <p
-                                    v-if="errors.accept_terms?.length"
-                                    class="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700"
-                                >
-                                    {{ errors.accept_terms[0] }}
-                                </p>
+                                    <p
+                                        v-if="errors.accept_terms?.length"
+                                        class="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700"
+                                    >
+                                        {{ errors.accept_terms[0] }}
+                                    </p>
 
-                                <p class="text-xs text-slate-600">
-                                    Die
-                                    <a href="/agb" target="_blank" rel="noreferrer" class="text-blue-600 hover:underline">AGB</a>
-                                    und
-                                    <a href="/datenschutzerklaerung" target="_blank" rel="noreferrer" class="text-blue-600 hover:underline">Datenschutzerklärung</a>
-                                    habe ich zur Kenntnis genommen.
-                                </p>
+                                    <p class="text-xs text-slate-600">
+                                        Die
+                                        <a href="/agb" target="_blank" rel="noreferrer" class="text-blue-600 hover:underline">AGB</a>
+                                        und
+                                        <a href="/datenschutzerklaerung" target="_blank" rel="noreferrer" class="text-blue-600 hover:underline">Datenschutzerklärung</a>
+                                        habe ich zur Kenntnis genommen.
+                                    </p>
 
-                                <p class="text-xs text-slate-500">
-                                    <span class="font-semibold">*</span> Pflichtfeld
-                                </p>
+                                    <p class="text-xs text-slate-500">
+                                        <span class="font-semibold">*</span> Pflichtfeld
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
@@ -834,15 +1238,46 @@ const submit = async () => {
                             </ul>
                         </div>
 
+                        <!-- Navigations-Buttons -->
                         <div class="flex flex-wrap items-center gap-3">
+                            <!-- Zurück-Button (ab Schritt 2) -->
                             <button
+                                v-if="currentStep > 1"
+                                type="button"
+                                @click="goToPreviousStep"
+                                :disabled="submitting"
+                                class="inline-flex items-center justify-center rounded-lg border border-slate-300 px-6 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <svg class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                                </svg>
+                                Zurück
+                            </button>
+
+                            <!-- Weiter-Button (Schritt 1 & 2) -->
+                            <button
+                                v-if="currentStep < 3"
+                                type="button"
+                                @click="goToNextStep"
+                                :disabled="submitting || isRequestOnlyProperty"
+                                class="inline-flex items-center justify-center rounded-lg bg-[#d9bf8c] px-6 py-2 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-[#c4a875] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c] focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#d9bf8c]/40 disabled:hover:bg-[#d9bf8c]/40"
+                            >
+                                Weiter
+                                <svg class="ml-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
+
+                            <!-- Berechnen-Button (nur Schritt 3) -->
+                            <button
+                                v-if="currentStep === 3"
                                 type="submit"
                                 :disabled="submitting || isRequestOnlyProperty || !form.acceptTerms || !form.property_type_key"
                                 class="inline-flex items-center justify-center rounded-lg bg-[#d9bf8c] px-6 py-2 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-[#c4a875] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c] focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#d9bf8c]/40 disabled:hover:bg-[#d9bf8c]/40"
                             >
                                 <svg
                                     v-if="submitting"
-                                    class="-ml-1 mr-2 h-4 w-4 animate-spin text-white"
+                                    class="-ml-1 mr-2 h-4 w-4 animate-spin text-slate-900"
                                     xmlns="http://www.w3.org/2000/svg"
                                     fill="none"
                                     viewBox="0 0 24 24"
@@ -856,6 +1291,7 @@ const submit = async () => {
                                 </svg>
                                 {{ submitting ? 'Wird berechnet...' : 'Berechnen' }}
                             </button>
+
                             <button
                                 type="button"
                                 @click="resetForm"

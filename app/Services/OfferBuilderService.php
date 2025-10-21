@@ -149,10 +149,10 @@ class OfferBuilderService
         $payload = [
             'name' => $input['name'] ?? null,
             'phone' => $input['phone'] ?? null,
-            'billing_street' => $input['street'] ?? Arr::get($calculation->inputs, 'address.street'),
-            'billing_zip' => $input['zip'] ?? Arr::get($calculation->inputs, 'address.zip'),
-            'billing_city' => $input['city'] ?? Arr::get($calculation->inputs, 'address.city'),
-            'billing_country' => $input['country'] ?? Arr::get($calculation->inputs, 'address.country', 'DE'),
+            'billing_street' => $input['street'] ?? Arr::get($calculation->inputs, 'billing_address.street'),
+            'billing_zip' => $input['zip'] ?? Arr::get($calculation->inputs, 'billing_address.zip'),
+            'billing_city' => $input['city'] ?? Arr::get($calculation->inputs, 'billing_address.city'),
+            'billing_country' => $input['country'] ?? 'DE',
         ];
 
         return Customer::updateOrCreate(

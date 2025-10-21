@@ -112,6 +112,9 @@ class OfferPublicController extends Controller
                 'name' => $offer->customer?->name,
                 'email' => $offer->customer?->email,
                 'phone' => $offer->customer?->phone,
+                'billing_street' => $offer->customer?->billing_street,
+                'billing_zip' => $offer->customer?->billing_zip,
+                'billing_city' => $offer->customer?->billing_city,
             ],
             'form_inputs' => [
                 'property' => Arr::only($calculationInputs, [

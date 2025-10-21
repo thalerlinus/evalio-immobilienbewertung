@@ -69,8 +69,9 @@ class RndCalculationController extends Controller
         $calculation = $service->calculate($validated, $request->user());
         $calculation->loadMissing('propertyType');
 
-        $address = Arr::wrap($validated['address'] ?? []);
-        $contact = Arr::wrap($validated['contact']);
+    $address = Arr::wrap($validated['address'] ?? []);
+    $billingAddress = Arr::wrap($validated['billing_address'] ?? []);
+    $contact = Arr::wrap($validated['contact']);
 
         $offer = $offerBuilder->create([
             'calculation_public_ref' => $calculation->public_ref,
@@ -78,10 +79,10 @@ class RndCalculationController extends Controller
                 'name' => $contact['name'] ?? null,
                 'email' => $contact['email'] ?? null,
                 'phone' => $contact['phone'] ?? null,
-                'street' => $address['street'] ?? null,
-                'zip' => $address['zip'] ?? null,
-                'city' => $address['city'] ?? null,
-                'country' => $address['country'] ?? null,
+                'street' => $billingAddress['street'] ?? null,
+                'zip' => $billingAddress['zip'] ?? null,
+                'city' => $billingAddress['city'] ?? null,
+                'country' => $billingAddress['country'] ?? 'DE',
             ],
             'addons' => [],
             'notes' => $validated['notes'] ?? null,

@@ -18,9 +18,9 @@ class CalculateRndRequest extends FormRequest
         return [
             'property_type_key' => ['required', 'string', 'exists:property_types,key'],
             'gnd_override' => ['nullable', 'integer', 'min:1', 'max:200'],
-            'baujahr' => ['required', 'integer', 'between:1800,' . $currentYear],
-            'anschaffungsjahr' => ['required', 'integer', 'gte:baujahr', 'between:1800,' . $currentYear],
-            'steuerjahr' => ['required', 'integer', 'gte:anschaffungsjahr', 'between:1800,' . $currentYear],
+            'baujahr' => ['required', 'integer', 'between:300,' . $currentYear],
+            'anschaffungsjahr' => ['required', 'integer', 'gte:baujahr', 'between:300,' . $currentYear],
+            'steuerjahr' => ['required', 'integer', 'gte:baujahr', 'between:300,' . $currentYear],
             'bauweise' => ['nullable', 'string', 'in:massiv,holz,unbekannt'],
             'eigennutzung' => ['nullable', 'boolean'],
             'renovations' => ['nullable', 'array'],
@@ -36,6 +36,10 @@ class CalculateRndRequest extends FormRequest
             'contact.email' => ['required', 'email:rfc,dns', 'max:255'],
             'contact.phone' => ['nullable', 'string', 'max:30', 'regex:/^[0-9 +()\-\/]*$/'],
             'contact.name' => ['nullable', 'string', 'max:255'],
+            'billing_address' => ['required', 'array'],
+            'billing_address.street' => ['required', 'string', 'max:255'],
+            'billing_address.zip' => ['required', 'string', 'size:5', 'regex:/^[0-9]{5}$/'],
+            'billing_address.city' => ['required', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
     }
