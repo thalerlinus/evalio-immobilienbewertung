@@ -25,6 +25,7 @@ class CreateOfferRequest extends FormRequest
             'customer.country' => ['nullable', 'string', 'max:2'],
             'addons' => ['nullable', 'array'],
             'addons.*' => ['string', 'exists:ga_pricings,key'],
+            'ga_package_key' => ['nullable', 'string', 'exists:ga_pricings,key'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ];
     }

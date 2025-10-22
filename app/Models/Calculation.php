@@ -33,6 +33,9 @@ class Calculation extends Model
 
     protected $appends = [
         'rnd_interval_label',
+        'afa_percent_from',
+        'afa_percent_to',
+        'afa_percent_label',
     ];
 
     protected $casts = [
@@ -80,6 +83,50 @@ class Calculation extends Model
         }
 
         return null;
+    }
+
+    public function getAfaPercentFromAttribute(): ?float
+    {
+        $denominator = $this->rnd_max ?? $this->rnd_years;
+
+        if (! $denominator || $denominator <= 0) {
+            return null;
+        }
+
+        return round(100 / $denominator, 2);
+    }
+
+    public function getAfaPercentToAttribute(): ?float
+    {
+        $denominator = $this->rnd_min ?? $this->rnd_years;
+
+        if (! $denominator || $denominator <= 0) {
+            return null;
+        }
+
+        return round(100 / $denominator, 2);
+    }
+
+    public function getAfaPercentLabelAttribute(): ?string
+    {
+        $from = $this->afa_percent_from;
+        $to = $this->afa_percent_to;
+
+        if ($from === null && $to === null) {
+            return null;
+        }
+
+        if ($from !== null && $to !== null) {
+            if (abs($from - $to) < 0.01) {
+                return sprintf('rd. %s %%', number_format($from, 2, ',', '.'));
+            }
+
+            return sprintf('rd. %s – %s %%', number_format($from, 2, ',', '.'), number_format($to, 2, ',', '.'));
+        }
+
+        $value = $from ?? $to;
+
+        return $value !== null ? sprintf('rd. %s %%', number_format($value, 2, ',', '.')) : null;
     }
 
     protected static function boot()

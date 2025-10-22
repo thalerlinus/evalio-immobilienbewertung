@@ -10,14 +10,14 @@ class PropertyTypeSeeder extends Seeder
     public function run(): void
     {
         $rows = [
-            ['key' => 'eigentumswohnung', 'label' => 'Eigentumswohnung', 'gnd' => 80, 'price_standard_eur' => 1499, 'request_only' => false],
-            ['key' => 'einfamilienhaus', 'label' => 'Einfamilienhaus', 'gnd' => 80, 'price_standard_eur' => 1449, 'request_only' => false],
-            ['key' => 'zweifamilienhaus', 'label' => 'Zweifamilienhaus', 'gnd' => 80, 'price_standard_eur' => 1549, 'request_only' => false],
-            ['key' => 'dreifamilienhaus', 'label' => 'Dreifamilienhaus', 'gnd' => 80, 'price_standard_eur' => 1549, 'request_only' => false],
-            ['key' => 'mfh_4_10', 'label' => 'Mehrfamilienhaus mit 4–10 WE', 'gnd' => 80, 'price_standard_eur' => 1699, 'request_only' => false],
-            ['key' => 'mfh_10_plus', 'label' => 'Mehrfamilienhaus mit mehr als 10 WE', 'gnd' => 80, 'price_standard_eur' => null, 'request_only' => true],
-            ['key' => 'wgh_10_minus', 'label' => 'Wohn- & Geschäftshaus mit bis zu 10 Einheiten', 'gnd' => 80, 'price_standard_eur' => 1699, 'request_only' => false],
-            ['key' => 'wgh_10_plus', 'label' => 'Wohn- & Geschäftshaus mit mehr als 10 Einheiten', 'gnd' => 80, 'price_standard_eur' => null, 'request_only' => true],
+            ['key' => 'eigentumswohnung', 'label' => 'Eigentumswohnung', 'gnd' => 80, 'price_standard_eur' => 1259, 'request_only' => false],
+            ['key' => 'einfamilienhaus', 'label' => 'Einfamilienhaus', 'gnd' => 80, 'price_standard_eur' => 1218, 'request_only' => false],
+            ['key' => 'zweifamilienhaus', 'label' => 'Zweifamilienhaus', 'gnd' => 80, 'price_standard_eur' => 1302, 'request_only' => false],
+            ['key' => 'dreifamilienhaus', 'label' => 'Dreifamilienhaus', 'gnd' => 80, 'price_standard_eur' => 1302, 'request_only' => false],
+            ['key' => 'mfh_4_10', 'label' => 'Mehrfamilienhaus mit 4–10 WE', 'gnd' => 80, 'price_standard_eur' => 1428, 'request_only' => false],
+            ['key' => 'mfh_10_plus', 'label' => 'Mehrfamilienhaus mit mehr als 10 WE', 'gnd' => 80, 'price_standard_eur' => null, 'request_only' => false],
+            ['key' => 'wgh_10_minus', 'label' => 'Wohn- & Geschäftshaus mit bis zu 10 Einheiten', 'gnd' => 80, 'price_standard_eur' => 1428, 'request_only' => false],
+            ['key' => 'wgh_10_plus', 'label' => 'Wohn- & Geschäftshaus mit mehr als 10 Einheiten', 'gnd' => 80, 'price_standard_eur' => null, 'request_only' => false],
             ['key' => 'gewerbeobjekt', 'label' => 'Gewerbeobjekt', 'gnd' => 60, 'price_standard_eur' => null, 'request_only' => true],
             ['key' => 'sonstiges', 'label' => 'Sonstiges', 'gnd' => null, 'price_standard_eur' => null, 'request_only' => true],
         ];

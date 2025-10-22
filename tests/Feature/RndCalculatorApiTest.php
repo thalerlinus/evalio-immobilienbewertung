@@ -48,6 +48,9 @@ class RndCalculatorApiTest extends TestCase
                     'score_details',
                     'rnd_years',
                     'afa_percent',
+                    'afa_percent_from',
+                    'afa_percent_to',
+                    'afa_percent_label',
                     'recommendation',
                 ],
             ]);
@@ -58,6 +61,31 @@ class RndCalculatorApiTest extends TestCase
         $this->assertSame('zweifamilienhaus', $calculation->propertyType->key);
         $this->assertGreaterThan(0, (float) $calculation->rnd_years);
         $this->assertSame(2025, $calculation->ermittlungsjahr);
+    $this->assertNotNull($calculation->afa_percent_from);
+    $this->assertNotNull($calculation->afa_percent_to);
+    $this->assertNotNull($calculation->afa_percent_label);
+    }
+
+    public function test_it_caps_property_age_at_seventy_five_years(): void
+    {
+        $payload = [
+            'property_type_key' => 'einfamilienhaus',
+            'baujahr' => 1900,
+            'anschaffungsjahr' => 2020,
+            'steuerjahr' => 2025,
+            'renovations' => [],
+        ];
+
+        $this->postJson('/api/rnd/calculate', $payload)->assertOk();
+
+        $calculation = Calculation::latest()->first();
+        $this->assertNotNull($calculation);
+
+        $this->assertSame(75, $calculation->alter);
+    $this->assertSame(1900 + 75, $calculation->result_debug['ermittlungsjahr_for_calculation']);
+    $this->assertSame(2025 - 1900, $calculation->result_debug['alter_original']);
+    $this->assertNotNull($calculation->afa_percent_from);
+    $this->assertNotNull($calculation->afa_percent_to);
     }
 
     public function test_it_creates_offer_from_calculation(): void

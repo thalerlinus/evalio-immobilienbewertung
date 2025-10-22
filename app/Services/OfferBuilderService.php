@@ -17,7 +17,7 @@ class OfferBuilderService
      */
     public function create(array $payload): Offer
     {
-        return DB::transaction(function () use ($payload) {
+    return DB::transaction(function () use ($payload) {
             $calculation = Calculation::with('propertyType')->where('public_ref', $payload['calculation_public_ref'] ?? null)->first();
 
             if (! $calculation) {
@@ -29,46 +29,46 @@ class OfferBuilderService
             $customerData = Arr::get($payload, 'customer', []);
             $customer = $this->upsertCustomer($customerData, $calculation);
 
-            $addonKeys = collect($payload['addons'] ?? [])->filter()->unique()->values();
-            $addonPricing = $addonKeys->isNotEmpty()
-                ? GaPricing::whereIn('key', $addonKeys)->get()->keyBy('key')
-                : collect();
+            $packageKey = $payload['ga_package_key'] ?? null;
 
-            $basePrice = $calculation->propertyType?->price_standard_eur;
-            $lineItems = [];
-
-            if ($basePrice !== null) {
-                $lineItems[] = [
-                    'key' => 'base',
-                    'label' => $calculation->propertyType?->label ?? __('Gutachten'),
-                    'amount_eur' => (int) $basePrice,
-                ];
+            if ($packageKey === '') {
+                $packageKey = null;
             }
 
-            $inspectionPrice = null;
-            $onlinePrice = null;
+            if ($packageKey === null) {
+                $addonKeys = collect($payload['addons'] ?? [])->filter()->unique()->values();
+                $packageKey = $addonKeys->first();
+            }
 
-            foreach ($addonKeys as $key) {
-                $pricing = $addonPricing->get($key);
+            $packagePricing = $packageKey
+                ? GaPricing::where('key', $packageKey)->first()
+                : null;
 
-                if (! $pricing) {
-                    continue;
-                }
+            if ($packageKey && (! $packagePricing || $packagePricing->category !== 'package')) {
+                throw ValidationException::withMessages([
+                    'ga_package_key' => __('Die ausgewählte Zusatzoption ist nicht verfügbar.'),
+                ]);
+            }
 
-                $amount = $pricing->price_eur !== null ? (int) $pricing->price_eur : null;
+            $basePrice = $calculation->propertyType?->price_standard_eur;
+            $baseLabel = $calculation->propertyType?->label ?? __('Gutachten');
+            $lineItems = [[
+                'key' => 'base',
+                'label' => $baseLabel,
+                'amount_eur' => $basePrice !== null ? (int) $basePrice : null,
+            ]];
 
-                if ($key === 'besichtigung') {
-                    $inspectionPrice = $amount;
-                }
+            $packagePrice = null;
+            $packageLabel = null;
 
-                if ($key === 'online') {
-                    $onlinePrice = $amount;
-                }
+            if ($packagePricing) {
+                $packageLabel = $packagePricing->label;
+                $packagePrice = $packagePricing->price_eur !== null ? (int) $packagePricing->price_eur : null;
 
                 $lineItems[] = [
-                    'key' => $key,
-                    'label' => $pricing->label,
-                    'amount_eur' => $amount,
+                    'key' => $packagePricing->key,
+                    'label' => $packageLabel,
+                    'amount_eur' => $packagePrice,
                 ];
             }
 
@@ -78,6 +78,12 @@ class OfferBuilderService
                 ->sum();
 
             if ($netTotal === 0) {
+                $netTotal = null;
+            }
+
+            $priceOnRequest = $basePrice === null;
+
+            if ($priceOnRequest) {
                 $netTotal = null;
             }
 
@@ -105,34 +111,118 @@ class OfferBuilderService
                     'rnd_max',
                     'rnd_interval_label',
                     'afa_percent',
+                    'afa_percent_from',
+                    'afa_percent_to',
+                    'afa_percent_label',
                     'recommendation',
                 ]),
                 'input_snapshot' => [
                     'calculation_inputs' => $calculation->inputs,
                     'customer' => $customerData,
-                    'addons' => $addonKeys->toArray(),
+                    'addons' => $packageKey ? [$packageKey] : [],
+                    'pricing' => [
+                        'base' => [
+                            'label' => $baseLabel,
+                            'amount_eur' => $basePrice,
+                        ],
+                    ],
                 ],
                 'base_price_eur' => $basePrice,
-                'inspection_price_eur' => $inspectionPrice,
+                'inspection_price_eur' => $packageKey === 'besichtigung' ? $packagePrice : null,
+                'ga_package_key' => $packageKey,
+                'ga_package_label' => $packageLabel,
+                'ga_package_price_eur' => $packagePrice,
                 'discount_eur' => 0,
                 'net_total_eur' => $netTotal,
-                'vat_percent' => $netTotal !== null ? $vatPercent : null,
+                'vat_percent' => $vatPercent,
                 'vat_amount_eur' => $vatAmount,
                 'gross_total_eur' => $grossTotal,
                 'line_items' => $lineItems,
                 'notes' => $payload['notes'] ?? null,
             ]);
 
-            if ($onlinePrice !== null) {
-                $offer->line_items = collect($offer->line_items ?? [])->map(function ($item) use ($onlinePrice) {
-                    if (($item['key'] ?? null) === 'online') {
-                        $item['amount_eur'] = $onlinePrice;
-                    }
+            return $offer->fresh(['calculation.propertyType', 'customer']);
+        });
+    }
 
-                    return $item;
-                })->toArray();
-                $offer->save();
+    public function updatePackage(Offer $offer, ?string $packageKey): Offer
+    {
+        return DB::transaction(function () use ($offer, $packageKey) {
+            if ($packageKey === null || $packageKey === '') {
+                $packageKey = null;
             }
+
+            $packagePricing = $packageKey ? GaPricing::where('key', $packageKey)->first() : null;
+
+            if ($packageKey && (! $packagePricing || $packagePricing->category !== 'package')) {
+                throw ValidationException::withMessages([
+                    'ga_package_key' => __('Die ausgewählte Zusatzoption ist nicht verfügbar.'),
+                ]);
+            }
+
+            $packageLabel = $packagePricing?->label;
+            $packagePrice = $packagePricing?->price_eur !== null ? (int) $packagePricing->price_eur : null;
+
+            $baseLabel = $offer->calculation?->propertyType?->label
+                ?? data_get($offer->calculation_snapshot, 'property_type.label')
+                ?? data_get($offer->input_snapshot, 'pricing.base.label')
+                ?? __('Gutachten');
+
+            $lineItems = [[
+                'key' => 'base',
+                'label' => $baseLabel,
+                'amount_eur' => $offer->base_price_eur !== null ? (int) $offer->base_price_eur : null,
+            ]];
+
+            if ($packagePricing) {
+                $lineItems[] = [
+                    'key' => $packagePricing->key,
+                    'label' => $packageLabel,
+                    'amount_eur' => $packagePrice,
+                ];
+            }
+
+            $netTotal = collect($lineItems)
+                ->pluck('amount_eur')
+                ->filter(fn ($value) => $value !== null)
+                ->sum();
+
+            if ($netTotal === 0) {
+                $netTotal = null;
+            }
+
+            $priceOnRequest = $offer->base_price_eur === null;
+
+            if ($priceOnRequest) {
+                $netTotal = null;
+            }
+
+            $vatPercent = 19;
+            $vatAmount = $netTotal !== null ? (int) round($netTotal * $vatPercent / 100) : null;
+            $grossTotal = $netTotal !== null ? $netTotal + $vatAmount : null;
+
+            $inputSnapshot = $offer->input_snapshot ?? [];
+            $inputSnapshot['addons'] = $packageKey ? [$packageKey] : [];
+            $inputSnapshot['pricing'] = $inputSnapshot['pricing'] ?? [];
+            $inputSnapshot['pricing']['base'] = [
+                'label' => $baseLabel,
+                'amount_eur' => $offer->base_price_eur,
+            ];
+
+            $offer->fill([
+                'inspection_price_eur' => $packageKey === 'besichtigung' ? $packagePrice : null,
+                'ga_package_key' => $packageKey,
+                'ga_package_label' => $packageLabel,
+                'ga_package_price_eur' => $packagePrice,
+                'net_total_eur' => $netTotal,
+                'vat_percent' => $vatPercent,
+                'vat_amount_eur' => $vatAmount,
+                'gross_total_eur' => $grossTotal,
+                'input_snapshot' => $inputSnapshot,
+                'line_items' => $lineItems,
+            ]);
+
+            $offer->save();
 
             return $offer->fresh(['calculation.propertyType', 'customer']);
         });

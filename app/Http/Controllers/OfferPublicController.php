@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Mail\OfferAdminNotificationMail;
 use App\Mail\OfferConfirmedMail;
 use App\Models\ContactSetting;
+use App\Models\GaPricing;
 use App\Models\Offer;
+use App\Services\OfferBuilderService;
+use App\Http\Requests\UpdateOfferPackageRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -29,6 +32,18 @@ class OfferPublicController extends Controller
                 'support_phone',
                 'support_phone_display',
             ]),
+            'gaPackages' => GaPricing::where('category', 'package')
+                ->orderBy('sort_order')
+                ->orderBy('label')
+                ->get(['key', 'label', 'price_eur', 'sort_order'])
+                ->map(fn ($pricing) => [
+                    'key' => $pricing->key,
+                    'label' => $pricing->label,
+                    'price_eur' => $pricing->price_eur,
+                    'sort_order' => $pricing->sort_order,
+                ])
+                ->values()
+                ->all(),
         ]);
     }
 
@@ -69,6 +84,30 @@ class OfferPublicController extends Controller
         ]);
     }
 
+    public function updatePackage(UpdateOfferPackageRequest $request, OfferBuilderService $service, string $token): JsonResponse
+    {
+        $offer = Offer::with(['calculation.propertyType', 'customer'])
+            ->where('view_token', $token)
+            ->firstOrFail();
+
+        if ($offer->accepted_at !== null) {
+            return response()->json([
+                'message' => __('Das Angebot wurde bereits bestätigt und kann nicht mehr geändert werden.'),
+                'data' => $this->buildOfferPayload($offer),
+            ], 422);
+        }
+
+        $validated = $request->validated();
+        $packageKey = $validated['ga_package_key'] ?? null;
+
+        $updatedOffer = $service->updatePackage($offer, $packageKey);
+
+        return response()->json([
+            'message' => __('Ihre Auswahl wurde aktualisiert.'),
+            'data' => $this->buildOfferPayload($updatedOffer),
+        ]);
+    }
+
     /**
      * @param  array<string, mixed>|null  $calculationInputs
      * @param  array<string, mixed>|null  $contact
@@ -96,6 +135,9 @@ class OfferPublicController extends Controller
                 'rnd_max' => $offer->calculation?->rnd_max,
                 'rnd_interval_label' => $offer->calculation?->rnd_interval_label,
                 'afa_percent' => $offer->calculation?->afa_percent,
+                'afa_percent_from' => $offer->calculation?->afa_percent_from,
+                'afa_percent_to' => $offer->calculation?->afa_percent_to,
+                'afa_percent_label' => $offer->calculation?->afa_percent_label,
                 'recommendation' => $offer->calculation?->recommendation,
             ],
             'pricing' => [
@@ -107,7 +149,14 @@ class OfferPublicController extends Controller
                 'vat_amount_eur' => $offer->vat_amount_eur,
                 'gross_total_eur' => $offer->gross_total_eur,
                 'line_items' => $offer->line_items,
+                'ga_package' => $offer->ga_package_key ? [
+                    'key' => $offer->ga_package_key,
+                    'label' => $offer->ga_package_label,
+                    'price_eur' => $offer->ga_package_price_eur,
+                ] : null,
+                'price_on_request' => $offer->base_price_eur === null,
             ],
+            'selected_package_key' => $offer->ga_package_key,
             'customer' => [
                 'name' => $offer->customer?->name,
                 'email' => $offer->customer?->email,

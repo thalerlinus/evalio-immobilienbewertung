@@ -11,25 +11,45 @@ class RenovationTimeFactorSeeder extends Seeder
 
     public function run(): void
     {
-        $map = [
-            'baeder_wc'         => [0, 1, 0.5, 0, 0, 0, 0],
-            'innenausbau'       => [0, 1, 1, 0.5, 0, 0, 0],
-            'fenster_tueren'    => [0, 1, 1, 0.5, 0, 0, 0],
-            'heizung'           => [0, 1, 1, 1, 0, 0, 0],
-            'leitungen'         => [0, 1, 1, 0, 0, 0, 0],
-            'dach_waermeschutz' => [0, 1, 0.75, 0.5, 0.25, 0, 0],
-            'aussenwaende'      => [0, 1, 0.75, 0.5, 0.25, 0, 0],
+        $baseFactors = [
+            'nicht' => 0.0,
+            'bis_5' => 1.0,
+            'bis_10' => 0.8,
+            'bis_15' => 0.6,
+            'bis_20' => 0.4,
+            'ueber_20' => 0.2,
+            'weiss_nicht' => 0.0,
+        ];
+
+        $categoryFactors = [
+            'baeder_wc' => $baseFactors,
+            'innenausbau' => $baseFactors,
+            'fenster_tueren' => $baseFactors,
+            'heizung' => $baseFactors,
+            'leitungen' => $baseFactors,
+            'dach_waermeschutz' => array_merge($baseFactors, [
+                'bis_10' => 0.75,
+                'bis_15' => 0.5,
+                'bis_20' => 0.3,
+                'ueber_20' => 0.15,
+            ]),
+            'aussenwaende' => array_merge($baseFactors, [
+                'bis_10' => 0.75,
+                'bis_15' => 0.5,
+                'bis_20' => 0.3,
+                'ueber_20' => 0.15,
+            ]),
         ];
 
         $catIds = DB::table('renovation_categories')->pluck('id', 'key');
         $rows = [];
-        foreach ($map as $key => $factors) {
+        foreach ($categoryFactors as $key => $factorsByWindow) {
             $id = $catIds[$key];
-            foreach (self::WINDOWS as $i => $win) {
+            foreach (self::WINDOWS as $win) {
                 $rows[] = [
                     'renovation_category_id' => $id,
                     'time_window_key'        => $win,
-                    'factor'                 => $factors[$i],
+                    'factor'                 => $factorsByWindow[$win] ?? 0.0,
                     'created_at'             => now(),
                     'updated_at'             => now(),
                 ];

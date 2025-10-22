@@ -61,7 +61,9 @@ class RndCalculatorService
             }
 
             $ermittlungsjahr = max($anschaffungsjahr, $steuerjahr);
-            $alter = max(0, $ermittlungsjahr - $baujahr);
+            $ermittlungsjahrForCalculation = min($ermittlungsjahr, $baujahr + 75);
+            $alterOriginal = max(0, $ermittlungsjahr - $baujahr);
+            $alter = max(0, $ermittlungsjahrForCalculation - $baujahr);
 
             $renovationsInput = collect($payload['renovations'] ?? [])
                 ->map(fn ($item) => [
@@ -96,6 +98,8 @@ class RndCalculatorService
             $rndRounded = round($rnd, 2);
             [$rndMin, $rndMax] = $this->buildInterval($rndRounded, $gnd, $relativeAge);
             $afa = $rndRounded > 0 ? round(100 / $rndRounded, 2) : null;
+            $afaFrom = $rndMax > 0 ? round(100 / $rndMax, 2) : null;
+            $afaTo = $rndMin > 0 ? round(100 / $rndMin, 2) : null;
             $recommendation = $this->buildRecommendation($rndRounded);
 
             $inputs = [
@@ -116,6 +120,12 @@ class RndCalculatorService
                 'score_raw' => round($scoreRaw, 4),
                 'score_rounded' => $score,
                 'relative_age' => round($relativeAge, 4),
+                'ermittlungsjahr_for_calculation' => $ermittlungsjahrForCalculation,
+                'alter_original' => $alterOriginal,
+                'alter_capped' => $alter,
+                'afa_percent_from' => $afaFrom,
+                'afa_percent_to' => $afaTo,
+                'afa_percent_single' => $afa,
                 'use_advanced_formula' => $useAdvancedFormula,
             ];
 

@@ -46,7 +46,9 @@ class RndCalculationController extends Controller
                 'weight' => (float) $weight->weight,
             ]);
 
-        $gaPricing = GaPricing::orderBy('id')->get(['key', 'label', 'price_eur']);
+        $gaPricing = GaPricing::orderBy('sort_order')
+            ->orderBy('label')
+            ->get(['key', 'label', 'category', 'price_eur']);
 
         return response()->json([
             'data' => [
@@ -69,27 +71,37 @@ class RndCalculationController extends Controller
         $calculation = $service->calculate($validated, $request->user());
         $calculation->loadMissing('propertyType');
 
-    $address = Arr::wrap($validated['address'] ?? []);
-    $billingAddress = Arr::wrap($validated['billing_address'] ?? []);
-    $contact = Arr::wrap($validated['contact']);
+        $gaPricing = GaPricing::orderBy('sort_order')
+            ->orderBy('label')
+            ->get(['key', 'label', 'category', 'price_eur']);
 
-        $offer = $offerBuilder->create([
-            'calculation_public_ref' => $calculation->public_ref,
-            'customer' => [
-                'name' => $contact['name'] ?? null,
-                'email' => $contact['email'] ?? null,
-                'phone' => $contact['phone'] ?? null,
-                'street' => $billingAddress['street'] ?? null,
-                'zip' => $billingAddress['zip'] ?? null,
-                'city' => $billingAddress['city'] ?? null,
-                'country' => $billingAddress['country'] ?? 'DE',
-            ],
-            'addons' => [],
-            'notes' => $validated['notes'] ?? null,
-        ]);
+        $offer = null;
 
-        Mail::to($contact['email'])
-            ->send(new CalculationResultMail($calculation, $offer));
+        if ($calculation->recommendation === __('Gutachten ist sinnvoll, Beauftragung empfehlen')) {
+            $address = Arr::wrap($validated['address'] ?? []);
+            $billingAddress = Arr::wrap($validated['billing_address'] ?? []);
+            $contact = Arr::wrap($validated['contact']);
+
+            $offer = $offerBuilder->create([
+                'calculation_public_ref' => $calculation->public_ref,
+                'customer' => [
+                    'name' => $contact['name'] ?? null,
+                    'email' => $contact['email'] ?? null,
+                    'phone' => $contact['phone'] ?? null,
+                    'street' => $billingAddress['street'] ?? null,
+                    'zip' => $billingAddress['zip'] ?? null,
+                    'city' => $billingAddress['city'] ?? null,
+                    'country' => $billingAddress['country'] ?? 'DE',
+                ],
+                'addons' => [],
+                'notes' => $validated['notes'] ?? null,
+            ]);
+
+            if (! empty($contact['email'])) {
+                Mail::to($contact['email'])
+                    ->send(new CalculationResultMail($calculation, $offer));
+            }
+        }
 
         return response()->json([
             'data' => [
@@ -119,10 +131,13 @@ class RndCalculationController extends Controller
                     'rnd_max' => $calculation->rnd_max,
                     'rnd_interval_label' => $calculation->rnd_interval_label,
                     'afa_percent' => $calculation->afa_percent !== null ? (float) $calculation->afa_percent : null,
+                    'afa_percent_from' => $calculation->afa_percent_from !== null ? (float) $calculation->afa_percent_from : null,
+                    'afa_percent_to' => $calculation->afa_percent_to !== null ? (float) $calculation->afa_percent_to : null,
+                    'afa_percent_label' => $calculation->afa_percent_label,
                     'recommendation' => $calculation->recommendation,
                     'created_at' => $calculation->created_at,
                 ],
-                'offer' => [
+                'offer' => $offer ? [
                     'id' => $offer->id,
                     'number' => $offer->number,
                     'view_token' => $offer->view_token,
@@ -136,8 +151,24 @@ class RndCalculationController extends Controller
                         'vat_amount_eur' => $offer->vat_amount_eur,
                         'gross_total_eur' => $offer->gross_total_eur,
                         'line_items' => $offer->line_items,
+                        'ga_package' => $offer->ga_package_key ? [
+                            'key' => $offer->ga_package_key,
+                            'label' => $offer->ga_package_label,
+                            'price_eur' => $offer->ga_package_price_eur,
+                        ] : null,
+                        'price_on_request' => $offer->base_price_eur === null,
                     ],
-                ],
+                    'ga_package_key' => $offer->ga_package_key,
+                    'packages' => $gaPricing
+                        ->where('category', 'package')
+                        ->map(fn ($pricing) => [
+                            'key' => $pricing->key,
+                            'label' => $pricing->label,
+                            'price_eur' => $pricing->price_eur,
+                        ])
+                        ->values()
+                        ->all(),
+                ] : null,
             ],
         ]);
     }

@@ -1,6 +1,6 @@
 <script setup>
 import MainLayout from '@/Layouts/MainLayout.vue';
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, nextTick, reactive, ref, watch } from 'vue';
 
 const props = defineProps({
     canLogin: Boolean,
@@ -172,6 +172,14 @@ const needsExtentInput = (timeWindowKey) => {
 };
 
 const isRequestOnlyProperty = computed(() => Boolean(selectedPropertyType.value?.request_only));
+
+const isPriceOnRequestSelection = computed(() =>
+    Boolean(
+        selectedPropertyType.value
+        && !selectedPropertyType.value.request_only
+        && selectedPropertyType.value.price_standard_eur === null
+    )
+);
 
 const requestOnlyHeadline = computed(() => {
     const label = selectedPropertyType.value?.label;
@@ -399,6 +407,12 @@ const intervalLabel = computed(() => {
         ?? formatIntervalLabel(result.value.rnd_min, result.value.rnd_max);
 });
 
+const NEGATIVE_RECOMMENDATION = 'Gutachten ist nicht sinnvoll, keine Beauftragung ermöglichen';
+
+const recommendationText = computed(() => result.value?.recommendation ?? null);
+
+const recommendationIsNegative = computed(() => recommendationText.value === NEGATIVE_RECOMMENDATION);
+
 const validationMessageMap = {
     property_type_key: 'Bitte wählen Sie eine Immobilienart aus.',
     gnd_override: 'Die optionale Gesamtnutzungsdauer muss zwischen 1 und 200 Jahren liegen.',
@@ -518,6 +532,17 @@ const submit = async () => {
                 window.location.href = offerUrl;
                 return;
             }
+
+            await nextTick();
+
+            if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+                const target = document.getElementById('recommendation-negative-box');
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }
         } else if (response.status === 422) {
             const data = await response.json();
             if (data?.errors) {
@@ -618,8 +643,9 @@ const submit = async () => {
                     </div>
 
                     <!-- Fortschrittsanzeige -->
-                    <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-                        <div class="flex items-center justify-between">
+                    <div class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-6">
+                        <!-- Desktop Version -->
+                        <div class="hidden items-center justify-between md:flex">
                             <div class="flex flex-1 items-center">
                                 <div class="flex items-center">
                                     <div
@@ -668,6 +694,63 @@ const submit = async () => {
                                         </div>
                                         <div class="text-xs text-slate-500">Abschluss</div>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Mobile Version -->
+                        <div class="flex items-center justify-between gap-1 md:hidden">
+                            <!-- Schritt 1 -->
+                            <div class="flex flex-1 flex-col items-center px-1">
+                                <div
+                                    class="flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold sm:h-10 sm:w-10"
+                                    :class="currentStep >= 1 ? 'bg-[#d9bf8c] text-slate-900' : 'bg-slate-200 text-slate-500'"
+                                >
+                                    1
+                                </div>
+                                <div class="mt-1.5 text-center">
+                                    <div class="text-[11px] font-semibold leading-tight sm:text-xs" :class="currentStep >= 1 ? 'text-slate-900' : 'text-slate-500'">
+                                        Objekt
+                                    </div>
+                                    <div class="text-[9px] leading-tight text-slate-500 sm:text-[10px]">Adresse</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Verbindungslinie -->
+                            <div class="h-px w-4 flex-shrink-0 bg-slate-300 sm:w-8"></div>
+                            
+                            <!-- Schritt 2 -->
+                            <div class="flex flex-1 flex-col items-center px-1">
+                                <div
+                                    class="flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold sm:h-10 sm:w-10"
+                                    :class="currentStep >= 2 ? 'bg-[#d9bf8c] text-slate-900' : 'bg-slate-200 text-slate-500'"
+                                >
+                                    2
+                                </div>
+                                <div class="mt-1.5 text-center">
+                                    <div class="text-[11px] font-semibold leading-tight sm:text-xs" :class="currentStep >= 2 ? 'text-slate-900' : 'text-slate-500'">
+                                        Zustand
+                                    </div>
+                                    <div class="text-[9px] leading-tight text-slate-500 sm:text-[10px]">Sanierungen</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Verbindungslinie -->
+                            <div class="h-px w-4 flex-shrink-0 bg-slate-300 sm:w-8"></div>
+                            
+                            <!-- Schritt 3 -->
+                            <div class="flex flex-1 flex-col items-center px-1">
+                                <div
+                                    class="flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold sm:h-10 sm:w-10"
+                                    :class="currentStep >= 3 ? 'bg-[#d9bf8c] text-slate-900' : 'bg-slate-200 text-slate-500'"
+                                >
+                                    3
+                                </div>
+                                <div class="mt-1.5 text-center">
+                                    <div class="text-[11px] font-semibold leading-tight sm:text-xs" :class="currentStep >= 3 ? 'text-slate-900' : 'text-slate-500'">
+                                        Kontakt
+                                    </div>
+                                    <div class="text-[9px] leading-tight text-slate-500 sm:text-[10px]">Abschluss</div>
                                 </div>
                             </div>
                         </div>
@@ -765,27 +848,29 @@ const submit = async () => {
                                     </p>
                                     <div v-if="form.unit_count && form.unit_count >= 4" class="mt-3 rounded-lg bg-blue-50 p-3 text-sm text-blue-800">
                                         <strong v-if="form.unit_count <= 10">✓ Online-Ersteinschätzung möglich</strong>
-                                        <strong v-else>ℹ Für Objekte mit mehr als 10 Einheiten erstellen wir ein individuelles Angebot</strong>
+                                        <strong v-else>
+                                            ℹ Für Objekte mit mehr als 10 Einheiten erstellen wir ein individuelles Angebot mit separater Preisabstimmung. Sie können die Anfrage trotzdem abschließen.
+                                        </strong>
                                     </div>
                                 </div>
                                 
                                 <div
                                     v-if="selectedPropertyType && isRequestOnlyProperty"
-                                    class="mt-4 rounded-xl border-2 border-red-500 bg-red-50 p-4 text-sm text-red-700"
+                                    class="mt-4 rounded-xl border border-slate-300 bg-slate-50 p-4 text-sm"
                                 >
-                                    <span class="block text-base font-semibold text-red-700">
+                                    <span class="block text-base font-semibold text-slate-700">
                                         {{ requestOnlyHeadline }}
                                     </span>
-                                    <span class="mt-2 block text-sm text-red-700">
+                                    <span class="mt-2 block text-sm text-slate-600">
                                         {{ requestOnlyMessage }}
                                     </span>
-                                    <span class="mt-4 block text-sm text-red-700">
+                                    <span class="mt-4 block text-sm text-slate-600">
                                         Ansprechpartner: {{ supportName }} · Telefon:
-                                        <a :href="`tel:${supportPhoneHref}`" class="font-semibold underline decoration-red-400">
+                                        <a :href="`tel:${supportPhoneHref}`" class="font-medium underline decoration-slate-400 hover:text-slate-900">
                                             {{ supportPhoneDisplay }}
                                         </a>
                                         · E-Mail:
-                                        <a :href="`mailto:${supportEmail}`" class="font-semibold underline decoration-red-400">
+                                        <a :href="`mailto:${supportEmail}`" class="font-medium underline decoration-slate-400 hover:text-slate-900">
                                             {{ supportEmail }}
                                         </a>
                                     </span>
@@ -1010,20 +1095,12 @@ const submit = async () => {
                                                 :step="20"
                                                 class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#d9bf8c] px-0"
                                             />
-                                            <div class="hidden sm:grid sm:grid-cols-5 gap-1 text-xs text-slate-500">
-                                                <span class="text-center leading-tight">Nur Aus­besserungen</span>
-                                                <span class="text-center leading-tight">Ver­einzelte Maß­nahmen</span>
-                                                <span class="text-center leading-tight">Teil­weise erneuert</span>
-                                                <span class="text-center leading-tight">Über­wiegend erneuert</span>
-                                                <span class="text-center leading-tight">Voll­ständig saniert</span>
-                                            </div>
-                                            <!-- Mobile Version mit kürzeren Texten -->
-                                            <div class="flex justify-between sm:hidden text-[10px] text-slate-500 -mx-1">
-                                                <span class="text-left leading-tight w-[18%]">Aus­bess.</span>
-                                                <span class="text-center leading-tight w-[18%]">Ver­einzelt</span>
-                                                <span class="text-center leading-tight w-[18%]">Teil­weise</span>
-                                                <span class="text-center leading-tight w-[18%]">Über­wieg.</span>
-                                                <span class="text-right leading-tight w-[18%]">Voll­ständig</span>
+                                            <div class="flex justify-between text-xs text-slate-500">
+                                                <span class="text-center leading-tight">Aus­bess.</span>
+                                                <span class="text-center leading-tight">Ver­einzelt</span>
+                                                <span class="text-center leading-tight">Teil­weise</span>
+                                                <span class="text-center leading-tight">Über­wieg.</span>
+                                                <span class="text-center leading-tight">Voll­stän.</span>
                                             </div>
                                         </div>
                                     </div>
@@ -1040,8 +1117,8 @@ const submit = async () => {
                                 <h3 class="mb-4 text-lg font-semibold text-slate-900">
                                     Ihre Kontaktdaten
                                 </h3>
-                                <div class="grid gap-4 md:grid-cols-2">
-                                    <div class="md:col-span-2">
+                                <div class="flex flex-col gap-4">
+                                    <div>
                                         <label class="block text-sm font-medium text-slate-700" for="contact-name">
                                             Name <span class="text-red-500">*</span>
                                         </label>
@@ -1061,7 +1138,7 @@ const submit = async () => {
                                             {{ errors['contact.name'][0] }}
                                         </p>
                                     </div>
-                                    <div class="md:col-span-2">
+                                    <div>
                                         <label class="block text-sm font-medium text-slate-700" for="contact-email">
                                             E-Mail-Adresse <span class="text-red-600">*</span>
                                         </label>
@@ -1081,7 +1158,7 @@ const submit = async () => {
                                             {{ errors['contact.email'][0] }}
                                         </p>
                                     </div>
-                                    <div class="md:col-span-2">
+                                    <div>
                                         <label class="block text-sm font-medium text-slate-700" for="contact-phone">
                                             Telefonnummer (optional)
                                         </label>
@@ -1103,7 +1180,12 @@ const submit = async () => {
                                     </div>
                                 </div>
                                 <p class="mt-4 text-xs text-slate-500">
-                                    Wir senden Ihnen das Ergebnis sowie ein individuelles Angebot unmittelbar per E-Mail zu.
+                                    <span v-if="isPriceOnRequestSelection">
+                                        Sie erhalten die Berechnung direkt per E-Mail. Den finalen Angebotspreis stimmen wir danach individuell mit Ihnen ab und melden uns ebenfalls per E-Mail.
+                                    </span>
+                                    <span v-else>
+                                        Wir senden Ihnen das Ergebnis sowie ein individuelles Angebot unmittelbar per E-Mail zu.
+                                    </span>
                                     Die Telefonnummer hilft uns bei Rückfragen, bleibt jedoch freiwillig.
                                 </p>
                             </div>
@@ -1228,6 +1310,64 @@ const submit = async () => {
                                         <span class="font-semibold">*</span> Pflichtfeld
                                     </p>
                                 </div>
+                            </div>
+                        </div>
+
+                        <div
+                            v-if="recommendationIsNegative"
+                            id="recommendation-negative-box"
+                            data-testid="recommendation-negative-box"
+                            class="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-slate-800 shadow-sm"
+                        >
+                            <div class="flex flex-col gap-6">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-slate-900">
+                                        Gutachten aktuell nicht sinnvoll
+                                    </h3>
+                                    <p class="mt-2 text-sm leading-relaxed text-slate-700">
+                                        {{ recommendationText ?? 'Unsere Berechnung zeigt, dass ein Gutachten aktuell nicht sinnvoll ist.' }}
+                                    </p>
+                                    <p class="mt-2 text-sm leading-relaxed text-slate-700">
+                                        Wir beraten Sie gerne persönlich und finden gemeinsam den passenden Weg für Ihre Immobilie.
+                                    </p>
+                                </div>
+
+                                <div class="grid gap-3 sm:grid-cols-2">
+                                    <div class="flex items-start gap-3 rounded-xl border border-amber-200 bg-white/80 p-4 text-sm">
+                                        <span class="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l9 6 9-6m-18 0l9 6 9-6M4 6h16a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V7a1 1 0 011-1z" />
+                                            </svg>
+                                        </span>
+                                        <div>
+                                            <div class="font-semibold text-slate-900">Kontakt per E-Mail</div>
+                                            <a :href="`mailto:${supportEmail}`" class="text-blue-700 hover:underline">
+                                                {{ supportEmail }}
+                                            </a>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        v-if="supportPhoneDisplay"
+                                        class="flex items-start gap-3 rounded-xl border border-amber-200 bg-white/80 p-4 text-sm"
+                                    >
+                                        <span class="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h1.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-1.257.63a11.042 11.042 0 005.516 5.516l.63-1.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                            </svg>
+                                        </span>
+                                        <div>
+                                            <div class="font-semibold text-slate-900">Telefonische Beratung</div>
+                                            <a :href="`tel:${supportPhoneHref}`" class="text-blue-700 hover:underline">
+                                                {{ supportPhoneDisplay }}
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <p class="text-xs text-slate-500">
+                                    Ihr persönlicher Ansprechpartner: {{ supportName }}
+                                </p>
                             </div>
                         </div>
 

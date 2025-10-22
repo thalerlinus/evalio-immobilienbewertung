@@ -1,6 +1,7 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
     offers: {
@@ -8,6 +9,47 @@ const props = defineProps({
         required: true,
     },
 });
+
+const showPriceDialog = ref(false);
+const selectedOffer = ref(null);
+
+const priceForm = useForm({
+    price: '',
+});
+
+const priceDialogTitle = computed(() => {
+    if (!selectedOffer.value) {
+        return '';
+    }
+
+    return `Preis für ${selectedOffer.value.number} festlegen`;
+});
+
+const openPriceDialog = (offer) => {
+    selectedOffer.value = offer;
+    priceForm.price = offer.base_price_eur ?? offer.net_total_eur ?? '';
+    showPriceDialog.value = true;
+};
+
+const closePriceDialog = () => {
+    showPriceDialog.value = false;
+    selectedOffer.value = null;
+    priceForm.reset();
+    priceForm.clearErrors();
+};
+
+const submitPrice = () => {
+    if (!selectedOffer.value) {
+        return;
+    }
+
+    priceForm.put(route('admin.offers.price.update', selectedOffer.value.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            closePriceDialog();
+        },
+    });
+};
 
 const formatCurrency = (value) => {
     if (value === null || value === undefined) {
@@ -54,6 +96,9 @@ const statusLabel = (status, acceptedAt) => {
             return status ?? 'offen';
     }
 };
+
+const priceDisplay = (offer) => (offer.price_on_request ? 'Auf Anfrage' : formatCurrency(offer.gross_total_eur));
+const netDisplay = (offer) => (offer.price_on_request ? '—' : formatCurrency(offer.net_total_eur));
 </script>
 
 <template>
@@ -95,16 +140,34 @@ const statusLabel = (status, acceptedAt) => {
                                     </span>
                                 </td>
                                 <td class="px-4 py-3 text-sm text-gray-600">{{ formatDateTime(offer.created_at) }}</td>
-                                <td class="px-4 py-3 text-sm font-semibold text-gray-900">{{ formatCurrency(offer.gross_total_eur) }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-900">
+                                    <div class="flex flex-col">
+                                        <span class="font-semibold">
+                                            {{ priceDisplay(offer) }}
+                                        </span>
+                                        <span v-if="!offer.price_on_request && offer.net_total_eur" class="text-xs text-gray-500">
+                                            Netto: {{ netDisplay(offer) }}
+                                        </span>
+                                    </div>
+                                </td>
                                 <td class="px-4 py-3 text-right text-sm">
-                                    <a
-                                        :href="offer.public_url"
-                                        target="_blank"
-                                        rel="noopener"
-                                        class="inline-flex items-center rounded-full bg-primary px-3 py-1 text-xs font-semibold text-white transition hover:bg-primary-dark"
-                                    >
-                                        Öffnen
-                                    </a>
+                                    <div class="flex items-center justify-end gap-2">
+                                        <button
+                                            type="button"
+                                            @click="openPriceDialog(offer)"
+                                            class="inline-flex items-center rounded-full border border-primary px-3 py-1 text-xs font-semibold text-primary transition hover:bg-primary hover:text-white"
+                                        >
+                                            Preis setzen
+                                        </button>
+                                        <a
+                                            :href="offer.public_url"
+                                            target="_blank"
+                                            rel="noopener"
+                                            class="inline-flex items-center rounded-full bg-primary px-3 py-1 text-xs font-semibold text-white transition hover:bg-primary-dark"
+                                        >
+                                            Öffnen
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                             <tr v-if="!offers.data.length">
@@ -132,17 +195,33 @@ const statusLabel = (status, acceptedAt) => {
                                 <div class="mt-2 flex flex-col gap-1 text-xs text-gray-600">
                                     <div><span class="font-medium">Immobilie:</span> {{ offer.property_type ?? '—' }}</div>
                                     <div><span class="font-medium">Erstellt:</span> {{ formatDateTime(offer.created_at) }}</div>
-                                    <div><span class="font-medium">Betrag:</span> <span class="font-semibold text-gray-900">{{ formatCurrency(offer.gross_total_eur) }}</span></div>
+                                    <div>
+                                        <span class="font-medium">Betrag:</span>
+                                        <span class="font-semibold text-gray-900">{{ priceDisplay(offer) }}</span>
+                                    </div>
+                                    <div v-if="!offer.price_on_request && offer.net_total_eur">
+                                        <span class="font-medium">Netto:</span>
+                                        <span class="font-semibold text-gray-900">{{ netDisplay(offer) }}</span>
+                                    </div>
                                 </div>
                             </div>
-                            <a
-                                :href="offer.public_url"
-                                target="_blank"
-                                rel="noopener"
-                                class="flex-shrink-0 inline-flex items-center rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-dark"
-                            >
-                                Öffnen
-                            </a>
+                            <div class="flex flex-col items-end gap-2">
+                                <button
+                                    type="button"
+                                    @click="openPriceDialog(offer)"
+                                    class="inline-flex items-center rounded-full border border-primary px-3 py-1 text-xs font-semibold text-primary transition hover:bg-primary hover:text-white"
+                                >
+                                    Preis setzen
+                                </button>
+                                <a
+                                    :href="offer.public_url"
+                                    target="_blank"
+                                    rel="noopener"
+                                    class="flex-shrink-0 inline-flex items-center rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-dark"
+                                >
+                                    Öffnen
+                                </a>
+                            </div>
                         </div>
                     </div>
                     <div v-if="!offers.data.length" class="px-4 py-6 text-center text-sm text-gray-500">
@@ -171,4 +250,66 @@ const statusLabel = (status, acceptedAt) => {
             </div>
         </div>
     </AdminLayout>
+
+    <transition name="fade">
+        <div
+            v-if="showPriceDialog"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4"
+            role="dialog"
+            aria-modal="true"
+        >
+            <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+                <h2 class="text-lg font-semibold text-gray-900">{{ priceDialogTitle }}</h2>
+                <p class="mt-1 text-sm text-gray-600">
+                    Bitte geben Sie den Netto-Betrag (ohne MwSt.) für dieses Angebot ein. Lassen Sie das Feld leer, um den Preis wieder auf „Auf Anfrage“ zu setzen.
+                </p>
+
+                <form class="mt-6 space-y-4" @submit.prevent="submitPrice">
+                    <div>
+                        <label for="manual-price" class="block text-sm font-medium text-gray-700">Netto-Preis in EUR</label>
+                        <input
+                            id="manual-price"
+                            v-model.number="priceForm.price"
+                            type="number"
+                            min="0"
+                            step="1"
+                            placeholder="z. B. 1499"
+                            class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+                        />
+                        <p v-if="priceForm.errors.price" class="mt-2 text-sm text-red-600">
+                            {{ priceForm.errors.price }}
+                        </p>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-3">
+                        <button
+                            type="button"
+                            class="inline-flex items-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            @click="closePriceDialog"
+                            :disabled="priceForm.processing"
+                        >
+                            Abbrechen
+                        </button>
+                        <button
+                            type="submit"
+                            class="inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-60"
+                            :disabled="priceForm.processing"
+                        >
+                            <svg
+                                v-if="priceForm.processing"
+                                class="-ml-1 mr-2 h-4 w-4 animate-spin"
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                            >
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                            </svg>
+                            Speichern
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </transition>
 </template>

@@ -13,9 +13,6 @@ wir haben Ihre Angebotsbestätigung erhalten. Gerne begleiten wir Sie auf dem we
 **Aktueller Status:** {{ $offer->status ?? 'bestätigt' }}
 @endcomponent
 
-@if(($offer->calculation?->recommendation))
-**Empfehlung:** {{ $offer->calculation->recommendation }}
-@endif
 
 @component('mail::button', ['url' => $publicUrl])
 Angebot online einsehen

@@ -20,6 +20,9 @@ Route::get('/angebote/{token}', [OfferPublicController::class, 'show'])
 Route::post('/angebote/{token}/confirm', [OfferPublicController::class, 'confirm'])
     ->name('offers.public.confirm');
 
+Route::post('/angebote/{token}/package', [OfferPublicController::class, 'updatePackage'])
+    ->name('offers.public.package');
+
 Route::get('/dashboard', function () {
     return redirect()->route('admin.dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
@@ -48,6 +51,7 @@ Route::middleware(['auth', 'verified', 'admin'])
         Route::put('/account/email', [AdminAccountController::class, 'updateEmail'])->name('account.email.update');
         Route::put('/account/password', [AdminAccountController::class, 'updatePassword'])->name('account.password.update');
         Route::get('/offers', [AdminOfferController::class, 'index'])->name('offers.index');
+        Route::put('/offers/{offer}/price', [AdminOfferController::class, 'updatePrice'])->name('offers.price.update');
     });
 
 require __DIR__.'/auth.php';

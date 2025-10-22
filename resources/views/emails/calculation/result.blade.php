@@ -8,11 +8,9 @@ Hallo {{ $contactName }},
 Vielen Dank für Ihre Anfrage. Auf Basis Ihrer Angaben haben wir die Restnutzungsdauer wie folgt ermittelt:
 
 @component('mail::panel')
-**Restnutzungsdauer:** {{ $calculation->rnd_years ? number_format((float) $calculation->rnd_years, 1, ',', '.') . ' Jahre' : '–' }}
+**Restnutzungsdauer:** {{ $calculation->rnd_interval_label ?? '–' }}
 
-**Ersteinschätzung:** {{ $calculation->rnd_interval_label ?? '–' }}
-
-**AfA-Satz:** {{ $calculation->afa_percent ? number_format((float) $calculation->afa_percent, 2, ',', '.') . ' %' : '–' }}
+**AfA-Satz:** {{ $calculation->afa_percent_label ?? '–' }}
 
 **Empfehlung:** {{ $calculation->recommendation ?? '–' }}
 @endcomponent
