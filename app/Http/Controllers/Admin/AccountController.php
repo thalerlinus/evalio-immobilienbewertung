@@ -32,11 +32,16 @@ class AccountController extends Controller
             $user->name = $validated['name'];
         }
 
-        if ($user->email !== $validated['email']) {
-            $user->email_verified_at = null;
-        }
-
+        // Für Admin-Benutzer setzen wir die E-Mail direkt als verifiziert
+        $emailChanged = $user->email !== $validated['email'];
+        
         $user->email = $validated['email'];
+        
+        // Wenn die E-Mail geändert wurde, setze sie direkt als verifiziert
+        if ($emailChanged) {
+            $user->email_verified_at = now();
+        }
+        
         $user->save();
 
         return back()->with('success', __('Zugangsdaten wurden aktualisiert.'));
