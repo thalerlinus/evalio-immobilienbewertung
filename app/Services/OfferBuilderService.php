@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Calculation;
 use App\Models\Customer;
+use App\Models\DiscountCode;
 use App\Models\GaPricing;
 use App\Models\Offer;
 use Illuminate\Support\Arr;
@@ -17,7 +18,7 @@ class OfferBuilderService
      */
     public function create(array $payload): Offer
     {
-    return DB::transaction(function () use ($payload) {
+        return DB::transaction(function () use ($payload) {
             $calculation = Calculation::with('propertyType')->where('public_ref', $payload['calculation_public_ref'] ?? null)->first();
 
             if (! $calculation) {
@@ -72,24 +73,10 @@ class OfferBuilderService
                 ];
             }
 
-            $netTotal = collect($lineItems)
-                ->pluck('amount_eur')
-                ->filter(fn ($value) => $value !== null)
-                ->sum();
-
-            if ($netTotal === 0) {
-                $netTotal = null;
-            }
-
             $priceOnRequest = $basePrice === null;
-
-            if ($priceOnRequest) {
-                $netTotal = null;
-            }
-
             $vatPercent = 19;
-            $vatAmount = $netTotal !== null ? (int) round($netTotal * $vatPercent / 100) : null;
-            $grossTotal = $netTotal !== null ? $netTotal + $vatAmount : null;
+
+            $pricing = $this->buildPricing($lineItems, $vatPercent, $priceOnRequest, null);
 
             $offer = Offer::create([
                 'calculation_id' => $calculation->id,
@@ -125,6 +112,7 @@ class OfferBuilderService
                             'label' => $baseLabel,
                             'amount_eur' => $basePrice,
                         ],
+                        'discount' => null,
                     ],
                 ],
                 'base_price_eur' => $basePrice,
@@ -132,11 +120,13 @@ class OfferBuilderService
                 'ga_package_key' => $packageKey,
                 'ga_package_label' => $packageLabel,
                 'ga_package_price_eur' => $packagePrice,
-                'discount_eur' => 0,
-                'net_total_eur' => $netTotal,
+                'discount_code' => null,
+                'discount_percent' => null,
+                'discount_eur' => $pricing['discount_net'],
+                'net_total_eur' => $pricing['net_total'],
                 'vat_percent' => $vatPercent,
-                'vat_amount_eur' => $vatAmount,
-                'gross_total_eur' => $grossTotal,
+                'vat_amount_eur' => $pricing['vat_amount'],
+                'gross_total_eur' => $pricing['gross_total'],
                 'line_items' => $lineItems,
                 'notes' => $payload['notes'] ?? null,
             ]);
@@ -182,24 +172,11 @@ class OfferBuilderService
                 ];
             }
 
-            $netTotal = collect($lineItems)
-                ->pluck('amount_eur')
-                ->filter(fn ($value) => $value !== null)
-                ->sum();
-
-            if ($netTotal === 0) {
-                $netTotal = null;
-            }
-
             $priceOnRequest = $offer->base_price_eur === null;
-
-            if ($priceOnRequest) {
-                $netTotal = null;
-            }
-
             $vatPercent = 19;
-            $vatAmount = $netTotal !== null ? (int) round($netTotal * $vatPercent / 100) : null;
-            $grossTotal = $netTotal !== null ? $netTotal + $vatAmount : null;
+            $discountPercent = $offer->discount_percent;
+
+            $pricing = $this->buildPricing($lineItems, $vatPercent, $priceOnRequest, $discountPercent);
 
             $inputSnapshot = $offer->input_snapshot ?? [];
             $inputSnapshot['addons'] = $packageKey ? [$packageKey] : [];
@@ -208,18 +185,60 @@ class OfferBuilderService
                 'label' => $baseLabel,
                 'amount_eur' => $offer->base_price_eur,
             ];
+            $inputSnapshot['pricing']['discount'] = $offer->discount_code ? [
+                'code' => $offer->discount_code,
+                'percent' => $offer->discount_percent,
+            ] : null;
 
             $offer->fill([
                 'inspection_price_eur' => $packageKey === 'besichtigung' ? $packagePrice : null,
                 'ga_package_key' => $packageKey,
                 'ga_package_label' => $packageLabel,
                 'ga_package_price_eur' => $packagePrice,
-                'net_total_eur' => $netTotal,
+                'discount_eur' => $pricing['discount_net'],
+                'net_total_eur' => $pricing['net_total'],
                 'vat_percent' => $vatPercent,
-                'vat_amount_eur' => $vatAmount,
-                'gross_total_eur' => $grossTotal,
+                'vat_amount_eur' => $pricing['vat_amount'],
+                'gross_total_eur' => $pricing['gross_total'],
                 'input_snapshot' => $inputSnapshot,
                 'line_items' => $lineItems,
+            ]);
+
+            $offer->save();
+
+            return $offer->fresh(['calculation.propertyType', 'customer']);
+        });
+    }
+
+    public function applyDiscount(Offer $offer, ?DiscountCode $discountCode): Offer
+    {
+        return DB::transaction(function () use ($offer, $discountCode) {
+            $lineItems = $offer->line_items ?? [];
+            $priceOnRequest = $offer->base_price_eur === null;
+            $vatPercent = $offer->vat_percent ?? 19;
+            $discountPercent = $discountCode?->percent;
+
+            $pricing = $this->buildPricing($lineItems, $vatPercent, $priceOnRequest, $discountPercent);
+
+            $discountSnapshot = $discountCode ? [
+                'code' => $discountCode->code,
+                'percent' => $discountCode->percent,
+            ] : null;
+
+            $inputSnapshot = $offer->input_snapshot ?? [];
+            $inputSnapshot['pricing'] = $inputSnapshot['pricing'] ?? [];
+            $inputSnapshot['pricing']['discount'] = $discountSnapshot;
+
+            $offer->fill([
+                'discount_code' => $discountCode?->code,
+                'discount_percent' => $discountCode?->percent,
+                'discount_eur' => $pricing['discount_net'],
+                'net_total_eur' => $pricing['net_total'],
+                'vat_percent' => $vatPercent,
+                'vat_amount_eur' => $pricing['vat_amount'],
+                'gross_total_eur' => $pricing['gross_total'],
+                'discount_applied_at' => $discountCode ? now() : null,
+                'input_snapshot' => $inputSnapshot,
             ]);
 
             $offer->save();
@@ -249,5 +268,49 @@ class OfferBuilderService
             ['email' => $email],
             array_filter($payload, fn ($value) => $value !== null && $value !== '')
         );
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $lineItems
+     * @return array{net_total: int|null, discount_net: int, vat_amount: int|null, gross_total: int|null}
+     */
+    private function buildPricing(array $lineItems, int $vatPercent, bool $priceOnRequest, ?int $discountPercent): array
+    {
+        $netSubtotal = collect($lineItems)
+            ->pluck('amount_eur')
+            ->filter(fn ($value) => $value !== null)
+            ->sum();
+
+        if ($netSubtotal === 0) {
+            $netSubtotal = null;
+        }
+
+        if ($priceOnRequest || $netSubtotal === null) {
+            return [
+                'net_total' => null,
+                'discount_net' => 0,
+                'vat_amount' => null,
+                'gross_total' => null,
+            ];
+        }
+
+        $percent = $discountPercent !== null ? max(0, min(100, (int) $discountPercent)) : 0;
+        $discountNet = $percent > 0 ? (int) round($netSubtotal * $percent / 100) : 0;
+        $discountNet = min($discountNet, $netSubtotal);
+
+        $netTotal = $netSubtotal - $discountNet;
+        if ($netTotal < 0) {
+            $netTotal = 0;
+        }
+
+        $vatAmount = (int) round($netTotal * $vatPercent / 100);
+        $grossTotal = $netTotal + $vatAmount;
+
+        return [
+            'net_total' => $netTotal,
+            'discount_net' => $discountNet,
+            'vat_amount' => $vatAmount,
+            'gross_total' => $grossTotal,
+        ];
     }
 }

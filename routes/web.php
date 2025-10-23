@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AccountController as AdminAccountController;
 use App\Http\Controllers\Admin\ContactSettingController as AdminContactSettingController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\DiscountCodeController as AdminDiscountCodeController;
 use App\Http\Controllers\Admin\OfferController as AdminOfferController;
 use App\Http\Controllers\Admin\PropertyTypeController as AdminPropertyTypeController;
 use App\Http\Controllers\HomeController;
@@ -22,6 +23,9 @@ Route::post('/angebote/{token}/confirm', [OfferPublicController::class, 'confirm
 
 Route::post('/angebote/{token}/package', [OfferPublicController::class, 'updatePackage'])
     ->name('offers.public.package');
+
+Route::post('/angebote/{token}/discount', [OfferPublicController::class, 'applyDiscount'])
+    ->name('offers.public.discount');
 
 Route::get('/dashboard', function () {
     return redirect()->route('admin.dashboard');
@@ -52,6 +56,8 @@ Route::middleware(['auth', 'verified', 'admin'])
         Route::put('/account/password', [AdminAccountController::class, 'updatePassword'])->name('account.password.update');
         Route::get('/offers', [AdminOfferController::class, 'index'])->name('offers.index');
         Route::put('/offers/{offer}/price', [AdminOfferController::class, 'updatePrice'])->name('offers.price.update');
+        Route::resource('discount-codes', AdminDiscountCodeController::class)
+            ->only(['index', 'store', 'update', 'destroy']);
     });
 
 require __DIR__.'/auth.php';

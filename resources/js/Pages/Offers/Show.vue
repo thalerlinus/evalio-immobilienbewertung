@@ -20,6 +20,12 @@ const props = defineProps({
 
 const offer = ref(JSON.parse(JSON.stringify(props.offer)));
 const availablePackages = ref([...props.gaPackages]);
+const discountCodeInput = ref(offer.value.pricing?.discount_code ?? '');
+const isApplyingDiscount = ref(false);
+const discountMessage = reactive({
+    status: 'idle',
+    message: '',
+});
 
 watch(
     () => props.offer,
@@ -27,6 +33,13 @@ watch(
         offer.value = JSON.parse(JSON.stringify(value ?? {}));
     },
     { deep: true },
+);
+
+watch(
+    () => offer.value?.pricing?.discount_code,
+    (value) => {
+        discountCodeInput.value = value ?? '';
+    },
 );
 
 const mergeObjects = (target, source) => ({
@@ -133,17 +146,82 @@ const updatePackage = async (packageKey) => {
     }
 };
 
+const applyDiscountCode = async () => {
+    if (! offer.value?.token || offer.value.is_confirmed || isApplyingDiscount.value) {
+        return;
+    }
+
+    const rawCode = discountCodeInput.value ?? '';
+    const normalizedCode = rawCode.trim() ? rawCode.trim().toUpperCase() : null;
+
+    if (normalizedCode) {
+        discountCodeInput.value = normalizedCode;
+    }
+
+    isApplyingDiscount.value = true;
+    discountMessage.status = 'pending';
+    discountMessage.message = '';
+
+    try {
+        const response = await fetch(`/angebote/${offer.value.token}/discount`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': csrfToken,
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                code: normalizedCode,
+            }),
+        });
+
+        const responseBody = await response.json().catch(() => ({}));
+
+        if (! response.ok) {
+            const errorMessage = responseBody?.message
+                ?? 'Der Rabattcode konnte nicht angewendet werden.';
+            throw new Error(errorMessage);
+        }
+
+        if (responseBody?.data) {
+            updateOffer(responseBody.data);
+        }
+
+        discountMessage.status = 'success';
+        discountMessage.message = responseBody?.message
+            ?? 'Rabattcode wurde angewendet.';
+    } catch (error) {
+        discountMessage.status = 'error';
+        discountMessage.message = error?.message
+            ?? 'Der Rabattcode konnte nicht angewendet werden.';
+    } finally {
+        isApplyingDiscount.value = false;
+    }
+};
+
+const removeDiscountCode = () => {
+    if (isApplyingDiscount.value) {
+        return;
+    }
+
+    discountCodeInput.value = '';
+    applyDiscountCode();
+};
+
 const formatPackagePrice = (value) => {
     if (value === null || value === undefined) {
         return 'Preis auf Anfrage';
     }
 
-    return new Intl.NumberFormat('de-DE', {
-        style: 'currency',
-        currency: 'EUR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(value);
+    const grossValue = applyVatToValue(value);
+
+    if (grossValue === null) {
+        return 'Preis auf Anfrage';
+    }
+
+    return formatCurrency(grossValue);
 };
 
 const propertyInputs = computed(() => offer.value.form_inputs?.property ?? {});
@@ -196,30 +274,54 @@ const formatCurrency = (value) => {
     }).format(value);
 };
 
-const priceOnRequest = computed(() => Boolean(offer.value?.pricing?.price_on_request));
+const vatPercent = computed(() => offer.value?.pricing?.vat_percent ?? 19);
 
-const displayLineItemAmount = (value) => (priceOnRequest.value ? '—' : formatCurrency(value));
-
-const netTotalDisplay = computed(() =>
-    priceOnRequest.value
-        ? 'Auf Anfrage'
-        : formatCurrency(offer.value?.pricing?.net_total_eur)
-);
-
-const vatLabel = computed(() => {
-    if (priceOnRequest.value) {
-        return 'Mehrwertsteuer';
+const applyVatToValue = (value) => {
+    if (value === null || value === undefined) {
+        return null;
     }
 
-    const percent = offer.value?.pricing?.vat_percent ?? 19;
-    return `Mehrwertsteuer ${percent} %`;
+    return Math.round(value * (100 + vatPercent.value) / 100);
+};
+
+const priceOnRequest = computed(() => Boolean(offer.value?.pricing?.price_on_request));
+
+const hasDiscount = computed(() => {
+    const code = offer.value?.pricing?.discount_code;
+    const percent = offer.value?.pricing?.discount_percent;
+    return Boolean(code && percent !== null && percent !== undefined);
 });
 
-const vatAmountDisplay = computed(() =>
-    priceOnRequest.value
-        ? '—'
-        : formatCurrency(offer.value?.pricing?.vat_amount_eur)
-);
+const discountPercent = computed(() => offer.value?.pricing?.discount_percent ?? null);
+const discountNetAmount = computed(() => offer.value?.pricing?.discount_eur ?? 0);
+const discountGrossAmount = computed(() => {
+    if (! hasDiscount.value || priceOnRequest.value) {
+        return null;
+    }
+
+    return applyVatToValue(discountNetAmount.value);
+});
+
+const discountGrossDisplay = computed(() => {
+    if (discountGrossAmount.value === null || discountGrossAmount.value === undefined) {
+        return '—';
+    }
+
+    return formatCurrency(discountGrossAmount.value);
+});
+
+const displayLineItemAmount = (value) => {
+    if (priceOnRequest.value) {
+        return '—';
+    }
+
+    if (value === null || value === undefined) {
+        return '—';
+    }
+
+    const grossAmount = applyVatToValue(value);
+    return grossAmount === null ? '—' : formatCurrency(grossAmount);
+};
 
 const grossTotalDisplay = computed(() =>
     priceOnRequest.value
@@ -503,14 +605,14 @@ const confirmOffer = async () => {
                             </div>
 
                             <!-- Immobilien-Adresse -->
-                            <div v-if="hasAddress" class="mt-6 rounded-2xl bg-gradient-to-br from-[#d9bf8c]/10 to-[#d9bf8c]/5 p-6 border border-[#d9bf8c]/20">
+                            <div v-if="hasAddress" class="mt-6 rounded-2xl bg-gradient-to-br from-[#d9bf8c]/10 to-[#d9bf8c]/5 p-4 border border-[#d9bf8c]/20 sm:p-6">
                                 <h3 class="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-[#d9bf8c]">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 flex-shrink-0 text-[#d9bf8c]">
                                         <path fill-rule="evenodd" d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 103 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 002.273 1.765 11.842 11.842 0 00.976.544l.062.029.018.008.006.003zM10 11.25a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z" clip-rule="evenodd" />
                                     </svg>
-                                    Objektadresse
+                                    <span>Objektadresse</span>
                                 </h3>
-                                <p class="mt-2 text-base font-medium text-gray-900">
+                                <p class="mt-2 text-sm font-medium text-gray-900 break-words sm:text-base">
                                     {{ addressInputs.street || '—' }}<br>
                                     {{ addressInputs.zip || '—' }} {{ addressInputs.city || '—' }}
                                 </p>
@@ -553,7 +655,7 @@ const confirmOffer = async () => {
                                 Der Preis wird aktuell individuell kalkuliert. Sie erhalten die genaue Angebotsumme nach unserer manuellen Prüfung per E-Mail.
                             </p>
                             <p v-else class="mt-2 text-sm text-gray-500">
-                                Alle Beträge verstehen sich netto zuzüglich gesetzlicher Mehrwertsteuer.
+                                Alle Preise verstehen sich inklusive 19&nbsp;% Mehrwertsteuer.
                             </p>
 
                             <div
@@ -570,7 +672,7 @@ const confirmOffer = async () => {
                                 <div class="mt-4 grid gap-3">
                                     <button
                                         type="button"
-                                        class="flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left text-sm transition hover:border-[#d9bf8c] hover:bg-white"
+                                        class="flex w-full flex-col items-start justify-between gap-2 rounded-2xl border px-4 py-3 text-left text-sm transition hover:border-[#d9bf8c] hover:bg-white sm:flex-row sm:items-center"
                                         :class="{
                                             'border-[#d9bf8c] bg-white shadow-sm ring-1 ring-[#d9bf8c]/20': !selectedPackageKey,
                                             'border-slate-200 bg-slate-100': Boolean(selectedPackageKey),
@@ -586,7 +688,7 @@ const confirmOffer = async () => {
                                         v-for="pkg in availablePackages"
                                         :key="pkg.key"
                                         type="button"
-                                        class="flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left text-sm transition hover:border-[#d9bf8c] hover:bg-white"
+                                        class="flex w-full flex-col items-start justify-between gap-2 rounded-2xl border px-4 py-3.5 text-left text-sm transition hover:border-[#d9bf8c] hover:bg-white sm:flex-row sm:items-center sm:py-3"
                                         :class="{
                                             'border-[#d9bf8c] bg-white shadow-sm ring-1 ring-[#d9bf8c]/20': selectedPackageKey === pkg.key,
                                             'border-slate-200 bg-white': selectedPackageKey !== pkg.key,
@@ -598,7 +700,7 @@ const confirmOffer = async () => {
                                             <span class="font-medium text-slate-900">{{ pkg.label }}</span>
                                             <span class="text-xs text-slate-500">Einmalige Zusatzleistung</span>
                                         </span>
-                                        <span class="text-sm font-semibold text-slate-900">{{ formatPackagePrice(pkg.price_eur) }}</span>
+                                        <span class="text-sm font-semibold text-slate-900 sm:text-right">{{ formatPackagePrice(pkg.price_eur) }}</span>
                                     </button>
                                 </div>
 
@@ -624,7 +726,86 @@ const confirmOffer = async () => {
                                 </div>
                             </div>
 
-                            <div class="mt-6 overflow-hidden rounded-2xl border border-slate-200">
+                            <div
+                                v-if="!priceOnRequest"
+                                class="mt-6 rounded-2xl border border-slate-200 bg-white p-6"
+                            >
+                                <h3 class="text-sm font-semibold text-slate-900">
+                                    Rabattcode einlösen
+                                </h3>
+                                <p class="mt-1 text-sm text-slate-600">
+                                    Tragen Sie Ihren Rabattcode ein, um einen prozentualen Nachlass auf den Gesamtbetrag zu erhalten.
+                                </p>
+
+                                <form class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center" @submit.prevent="applyDiscountCode">
+                                    <input
+                                        v-model="discountCodeInput"
+                                        type="text"
+                                        placeholder="z. B. EVALIO10"
+                                        class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
+                                        :disabled="isApplyingDiscount || offer.is_confirmed"
+                                    />
+                                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                                        <button
+                                            type="submit"
+                                            class="inline-flex items-center justify-center rounded-lg bg-[#d9bf8c] px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-[#c4a875] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c] focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#d9bf8c]/40"
+                                            :disabled="isApplyingDiscount || offer.is_confirmed"
+                                        >
+                                            <svg
+                                                v-if="isApplyingDiscount"
+                                                class="-ml-1 mr-2 h-4 w-4 animate-spin"
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                                            </svg>
+                                            Rabatt anwenden
+                                        </button>
+                                        <button
+                                            v-if="hasDiscount"
+                                            type="button"
+                                            class="inline-flex items-center justify-center rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-100"
+                                            :disabled="isApplyingDiscount || offer.is_confirmed"
+                                            @click="removeDiscountCode"
+                                        >
+                                            Rabatt entfernen
+                                        </button>
+                                    </div>
+                                </form>
+
+                                <div v-if="discountMessage.status !== 'idle'" class="mt-3">
+                                    <p
+                                        v-if="discountMessage.status === 'success'"
+                                        class="text-sm text-emerald-600"
+                                    >
+                                        {{ discountMessage.message }}
+                                    </p>
+                                    <p
+                                        v-else-if="discountMessage.status === 'error'"
+                                        class="text-sm text-red-600"
+                                    >
+                                        {{ discountMessage.message }}
+                                    </p>
+                                    <p
+                                        v-else
+                                        class="text-sm text-slate-500"
+                                    >
+                                        Rabattcode wird geprüft …
+                                    </p>
+                                </div>
+
+                                <p
+                                    v-if="hasDiscount && discountPercent !== null"
+                                    class="mt-2 text-xs font-medium text-emerald-600"
+                                >
+                                    Aktiver Rabatt: {{ offer.pricing.discount_code }} ({{ discountPercent }} %)
+                                </p>
+                            </div>
+
+                            <!-- Desktop: Tabelle -->
+                            <div class="mt-6 hidden overflow-hidden rounded-2xl border border-slate-200 sm:block">
                                 <table class="min-w-full divide-y divide-slate-200">
                                     <thead class="bg-slate-50">
                                         <tr>
@@ -632,7 +813,7 @@ const confirmOffer = async () => {
                                                 Leistung
                                             </th>
                                             <th scope="col" class="px-6 py-3 text-right text-sm font-semibold text-slate-500">
-                                                Preis (netto)
+                                                Preis (brutto)
                                             </th>
                                         </tr>
                                     </thead>
@@ -652,24 +833,40 @@ const confirmOffer = async () => {
                                 </table>
                             </div>
 
-                            <dl class="mt-6 space-y-3 text-sm text-slate-600">
-                                <div class="flex justify-between">
-                                    <dt>Zwischensumme (netto)</dt>
-                                    <dd class="font-semibold text-slate-900">
-                                        {{ netTotalDisplay }}
-                                    </dd>
+                            <!-- Mobile: Card-Layout -->
+                            <div class="mt-6 space-y-3 sm:hidden">
+                                <div
+                                    v-for="item in offer.pricing?.line_items || []"
+                                    :key="item.key"
+                                    class="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                >
+                                    <span class="text-sm font-medium text-slate-900">
+                                        {{ item.label ?? 'Position' }}
+                                    </span>
+                                    <span class="text-sm font-semibold text-slate-700">
+                                        {{ displayLineItemAmount(item.amount_eur) }}
+                                    </span>
                                 </div>
-                                <div class="flex justify-between">
-                                    <dt>{{ vatLabel }}</dt>
-                                    <dd class="font-semibold text-slate-900">
-                                        {{ vatAmountDisplay }}
+                            </div>
+
+                            <dl class="mt-6 space-y-3 text-sm text-slate-600">
+                                <div v-if="hasDiscount && !priceOnRequest" class="flex justify-between text-sm">
+                                    <dt>
+                                        Rabattcode {{ offer.pricing?.discount_code }}
+                                        <span v-if="discountPercent !== null"> ({{ discountPercent }} %)</span>
+                                    </dt>
+                                    <dd class="font-semibold text-emerald-600">
+                                        -{{ discountGrossDisplay }}
                                     </dd>
                                 </div>
                                 <div class="flex items-center justify-between rounded-2xl bg-gradient-to-r from-slate-800 to-slate-900 px-4 py-3 text-base font-semibold text-white shadow-lg">
-                                    <dt>Gesamtbetrag (brutto)</dt>
+                                    <dt>Gesamtbetrag (inkl. MwSt.)</dt>
                                     <dd>{{ grossTotalDisplay }}</dd>
                                 </div>
                             </dl>
+                            <p v-if="!priceOnRequest" class="mt-3 text-xs text-slate-500">
+                                Alle oben genannten Preise enthalten bereits 19&nbsp;% MwSt.
+                            </p>
                         </div>
 
                         <!-- Angebot bestätigen Block -->
@@ -704,33 +901,33 @@ const confirmOffer = async () => {
                                             v-model="confirmationConsent"
                                             type="checkbox"
                                             required
-                                            class="mt-1 h-4 w-4 rounded border-slate-300 text-[#d9bf8c] focus:ring-[#d9bf8c]"
+                                            class="mt-1 h-4 w-4 flex-shrink-0 rounded border-slate-300 text-[#d9bf8c] focus:ring-[#d9bf8c]"
                                         />
-                                        <span class="space-y-2 leading-snug">
+                                        <span class="space-y-2 leading-relaxed">
                                             <span class="block text-sm font-semibold text-slate-900">
                                                 Ich bin einverstanden und verlange ausdrücklich, dass Sie vor Ablauf der Widerrufsfrist mit der Ausführung der beauftragten Dienstleistung beginnen.<span class="text-red-500">*</span>
                                             </span>
-                                            <span class="block text-sm text-slate-700">
+                                            <span class="block text-xs text-slate-700 sm:text-sm">
                                                 Mir ist bekannt, dass ich bei vollständiger Vertragserfüllung durch Sie mein Widerrufsrecht verliere.
                                             </span>
-                                            <span class="block text-sm text-slate-700">
+                                            <span class="block text-xs text-slate-700 sm:text-sm">
                                                 Die
-                                                <a href="/agb" target="_blank" rel="noreferrer" class="text-[#c4a875] hover:underline hover:text-[#d9bf8c]">AGB</a>
+                                                <a href="/agb" target="_blank" rel="noreferrer" class="underline text-[#c4a875] hover:text-[#d9bf8c]">AGB</a>
                                                 und
-                                                <a href="/widerrufsbelehrung" target="_blank" rel="noreferrer" class="text-[#c4a875] hover:underline hover:text-[#d9bf8c]">Widerrufsbelehrung</a>
+                                                <a href="/widerrufsbelehrung" target="_blank" rel="noreferrer" class="underline text-[#c4a875] hover:text-[#d9bf8c]">Widerrufsbelehrung</a>
                                                 habe ich zur Kenntnis genommen und akzeptiert.
                                             </span>
-                                            <span class="block text-sm text-slate-500">
+                                            <span class="block text-xs text-slate-500">
                                                 Alle Preise verstehen sich inkl. MwSt.
                                             </span>
-                                            <span class="block text-slate-500">
+                                            <span class="block text-xs text-slate-500">
                                                 <span class="font-semibold">*</span> Pflichtfeld
                                             </span>
                                         </span>
                                     </label>
                                     <p
                                         v-if="confirmationState.status === 'error' && confirmationState.error === CONSENT_REQUIRED_MESSAGE"
-                                        class="mt-3 rounded-lg bg-red-100 px-3 py-2 text-red-700"
+                                        class="mt-3 rounded-lg bg-red-100 px-3 py-2 text-xs text-red-700 sm:text-sm"
                                     >
                                         {{ CONSENT_REQUIRED_MESSAGE }}
                                     </p>
@@ -739,7 +936,7 @@ const confirmOffer = async () => {
                                     type="button"
                                     :disabled="confirming || ! offer.can_confirm || ! confirmationConsent"
                                     @click="confirmOffer"
-                                    class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#d9bf8c] px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-[#c4a875] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c] focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#d9bf8c]/40"
+                                    class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#d9bf8c] px-4 py-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-[#c4a875] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c] focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#d9bf8c]/40 sm:py-2"
                                 >
                                     <svg
                                         v-if="confirming"
@@ -888,7 +1085,9 @@ const confirmOffer = async () => {
                                     <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">
                                         Sanierungsangaben
                                     </h3>
-                                    <div class="mt-3 overflow-hidden rounded-2xl border border-gray-200">
+                                    
+                                    <!-- Desktop: Tabelle -->
+                                    <div class="mt-3 hidden overflow-hidden rounded-2xl border border-gray-200 sm:block">
                                         <table class="min-w-full divide-y divide-gray-200 text-sm">
                                             <thead class="bg-gray-50 text-gray-500">
                                                 <tr>
@@ -911,6 +1110,33 @@ const confirmOffer = async () => {
                                                 </tr>
                                             </tbody>
                                         </table>
+                                    </div>
+
+                                    <!-- Mobile: Card-Layout -->
+                                    <div class="mt-3 space-y-3 sm:hidden">
+                                        <div
+                                            v-for="item in renovationInputs"
+                                            :key="item.category_key"
+                                            class="rounded-2xl border border-gray-200 bg-white p-4"
+                                        >
+                                            <h4 class="font-semibold text-gray-900">
+                                                {{ item.label ?? item.category_key ?? 'Kategorie' }}
+                                            </h4>
+                                            <dl class="mt-2 space-y-1 text-sm">
+                                                <div class="flex justify-between">
+                                                    <dt class="text-gray-500">Umfang:</dt>
+                                                    <dd class="font-medium text-gray-700">
+                                                        {{ formatExtentPercent(item.extent_percent) }}
+                                                    </dd>
+                                                </div>
+                                                <div class="flex justify-between">
+                                                    <dt class="text-gray-500">Zeitpunkt:</dt>
+                                                    <dd class="font-medium text-gray-700">
+                                                        {{ formatTimeWindow(item.time_window_key) }}
+                                                    </dd>
+                                                </div>
+                                            </dl>
+                                        </div>
                                     </div>
                                 </section>
 

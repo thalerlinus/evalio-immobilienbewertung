@@ -29,6 +29,12 @@ const navItems = [
         match: ['admin.values.index', 'admin.values.*'],
     },
     {
+        key: 'discount-codes',
+        label: 'Rabattcodes',
+        route: 'admin.discount-codes.index',
+        match: ['admin.discount-codes.index', 'admin.discount-codes.*'],
+    },
+    {
         key: 'settings',
         label: 'Settings',
         route: 'admin.settings.index',

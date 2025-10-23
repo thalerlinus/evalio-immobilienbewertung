@@ -21,6 +21,9 @@ class Offer extends Model
         'input_snapshot',
         'base_price_eur',
         'inspection_price_eur',
+    'discount_code',
+    'discount_percent',
+    'discount_applied_at',
         'discount_eur',
         'net_total_eur',
         'vat_percent',
@@ -47,6 +50,7 @@ class Offer extends Model
         'input_snapshot' => 'array',
         'base_price_eur' => 'integer',
         'inspection_price_eur' => 'integer',
+        'discount_percent' => 'integer',
         'discount_eur' => 'integer',
         'net_total_eur' => 'integer',
         'vat_percent' => 'integer',
@@ -57,6 +61,7 @@ class Offer extends Model
         'accepted_at' => 'datetime',
         'rejected_at' => 'datetime',
         'expires_at' => 'datetime',
+        'discount_applied_at' => 'datetime',
         'line_items' => 'array',
     ];
 

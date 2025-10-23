@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ApplyDiscountCodeRequest;
+use App\Http\Requests\UpdateOfferPackageRequest;
 use App\Mail\OfferAdminNotificationMail;
 use App\Mail\OfferConfirmedMail;
 use App\Models\ContactSetting;
+use App\Models\DiscountCode;
 use App\Models\GaPricing;
 use App\Models\Offer;
 use App\Services\OfferBuilderService;
-use App\Http\Requests\UpdateOfferPackageRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -108,6 +110,50 @@ class OfferPublicController extends Controller
         ]);
     }
 
+    public function applyDiscount(ApplyDiscountCodeRequest $request, OfferBuilderService $service, string $token): JsonResponse
+    {
+        $offer = Offer::with(['calculation.propertyType', 'customer'])
+            ->where('view_token', $token)
+            ->firstOrFail();
+
+        if ($offer->accepted_at !== null) {
+            return response()->json([
+                'message' => __('Das Angebot wurde bereits bestätigt und kann nicht mehr geändert werden.'),
+                'data' => $this->buildOfferPayload($offer),
+            ], 422);
+        }
+
+        $validated = $request->validated();
+        $codeValue = isset($validated['code']) ? mb_strtoupper(trim($validated['code'])) : null;
+
+        if (! $codeValue) {
+            $updatedOffer = $service->applyDiscount($offer, null);
+
+            return response()->json([
+                'message' => __('Rabattcode wurde entfernt.'),
+                'data' => $this->buildOfferPayload($updatedOffer),
+            ]);
+        }
+
+        $discountCode = DiscountCode::active()
+            ->where('code', $codeValue)
+            ->first();
+
+        if (! $discountCode) {
+            return response()->json([
+                'message' => __('Der eingegebene Rabattcode ist ungültig oder nicht mehr aktiv.'),
+                'data' => $this->buildOfferPayload($offer),
+            ], 422);
+        }
+
+        $updatedOffer = $service->applyDiscount($offer, $discountCode);
+
+        return response()->json([
+            'message' => __('Rabattcode wurde angewendet.'),
+            'data' => $this->buildOfferPayload($updatedOffer),
+        ]);
+    }
+
     /**
      * @param  array<string, mixed>|null  $calculationInputs
      * @param  array<string, mixed>|null  $contact
@@ -144,6 +190,9 @@ class OfferPublicController extends Controller
                 'base_price_eur' => $offer->base_price_eur,
                 'inspection_price_eur' => $offer->inspection_price_eur,
                 'discount_eur' => $offer->discount_eur,
+                'discount_code' => $offer->discount_code,
+                'discount_percent' => $offer->discount_percent,
+                'discount_applied_at' => $offer->discount_applied_at,
                 'net_total_eur' => $offer->net_total_eur,
                 'vat_percent' => $offer->vat_percent,
                 'vat_amount_eur' => $offer->vat_amount_eur,

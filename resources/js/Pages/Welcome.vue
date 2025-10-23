@@ -57,7 +57,7 @@ const form = reactive({
     anschaffungsjahr: '',
     steuerjahr: '',
     bauweise: 'massiv',
-    eigennutzung: true,
+    eigennutzung: null,
     renovations: defaultRenovations(),
     address: {
         street: '',
@@ -96,8 +96,8 @@ const extentWeightMap = computed(() => {
 
 // Zeitfenster-Optionen in logischer Reihenfolge
 const timeWindowOptionsOrdered = computed(() => [
-    { key: 'nicht', label: 'Nicht durchgeführt / Weiß nicht', needsExtent: false },
-    { key: 'weiss_nicht', label: 'Weiß nicht wann', needsExtent: false },
+    { key: 'nicht', label: 'Nicht durchgeführt', needsExtent: false },
+    { key: 'weiss_nicht', label: 'Weiß ich nicht', needsExtent: false },
     { key: 'bis_5', label: 'In den letzten 5 Jahren', needsExtent: true },
     { key: 'bis_10', label: 'Vor 5-10 Jahren', needsExtent: true },
     { key: 'bis_15', label: 'Vor 10-15 Jahren', needsExtent: true },
@@ -172,14 +172,6 @@ const needsExtentInput = (timeWindowKey) => {
 };
 
 const isRequestOnlyProperty = computed(() => Boolean(selectedPropertyType.value?.request_only));
-
-const isPriceOnRequestSelection = computed(() =>
-    Boolean(
-        selectedPropertyType.value
-        && !selectedPropertyType.value.request_only
-        && selectedPropertyType.value.price_standard_eur === null
-    )
-);
 
 const requestOnlyHeadline = computed(() => {
     const label = selectedPropertyType.value?.label;
@@ -256,7 +248,7 @@ const clearErrors = () => {
 };
 
 const resetForm = () => {
-    form.property_type_key = props.propertyTypes[0]?.key ?? '';
+    form.property_type_key = '';
     form.property_type_category = 'single';
     form.unit_count = null;
     form.gnd_override = '';
@@ -264,7 +256,7 @@ const resetForm = () => {
     form.anschaffungsjahr = '';
     form.steuerjahr = '';
     form.bauweise = 'massiv';
-    form.eigennutzung = true;
+    form.eigennutzung = null;
     form.renovations = defaultRenovations();
     form.address = {
         street: '',
@@ -956,6 +948,20 @@ const submit = async () => {
                                                     <span class="text-sm text-slate-700">Nein</span>
                                                 </label>
                                             </div>
+                                            <!-- Hinweis bei Eigennutzung -->
+                                            <div v-if="form.eigennutzung === true" class="mt-3 rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900">
+                                                <div class="flex gap-2">
+                                                    <svg class="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                    <div>
+                                                        <strong>Wichtiger Hinweis:</strong> Eine Abschreibung ist nur bei Immobilien möglich, die der Erzielung von Einkünften dienen (z. B. Vermietung, gewerbliche Nutzung). Bei privater Eigennutzung oder unentgeltlicher Überlassung ist keine steuerliche Abschreibung möglich.
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <p v-if="errors.eigennutzung?.length" class="mt-2 text-xs text-red-600">
+                                                {{ errors.eigennutzung[0] }}
+                                            </p>
                                         </div>
                                 </div>
                             </div>
