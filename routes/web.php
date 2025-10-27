@@ -15,6 +15,23 @@ use Inertia\Inertia;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
+// Legal Pages
+Route::get('/datenschutz', function () {
+    return Inertia::render('Legal/Privacy');
+})->name('legal.privacy');
+
+Route::get('/widerrufsbelehrung', function () {
+    return Inertia::render('Legal/Revocation');
+})->name('legal.revocation');
+
+Route::get('/agb', function () {
+    return Inertia::render('Legal/Terms');
+})->name('legal.terms');
+
+Route::get('/impressum', function () {
+    return Inertia::render('Legal/Imprint');
+})->name('legal.imprint');
+
 Route::get('/angebote/{token}', [OfferPublicController::class, 'show'])
     ->name('offers.public.show');
 

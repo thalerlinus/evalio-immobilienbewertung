@@ -1,4 +1,6 @@
 <script setup>
+import { Link } from '@inertiajs/vue3';
+
 const currentYear = new Date().getFullYear();
 </script>
 
@@ -113,21 +115,25 @@ const currentYear = new Date().getFullYear();
                 <div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
                     <!-- Rechtliche Links -->
                     <div class="flex flex-wrap items-center justify-center gap-4 text-sm">
-                        <a href="#" class="text-gray-400 hover:text-[#d9bf8c] transition">
+                        <Link href="/datenschutz" class="text-gray-400 hover:text-[#d9bf8c] transition">
                             Datenschutz
-                        </a>
+                        </Link>
                         <span class="text-gray-600">|</span>
-                        <a href="#" class="text-gray-400 hover:text-[#d9bf8c] transition">
+                        <Link href="/impressum" class="text-gray-400 hover:text-[#d9bf8c] transition">
                             Impressum
-                        </a>
+                        </Link>
                         <span class="text-gray-600">|</span>
-                        <a href="#" class="text-gray-400 hover:text-[#d9bf8c] transition">
+                        <Link href="/agb" class="text-gray-400 hover:text-[#d9bf8c] transition">
                             AGB
-                        </a>
+                        </Link>
                         <span class="text-gray-600">|</span>
-                        <a href="/login" class="text-gray-400 hover:text-[#d9bf8c] transition">
+                        <Link href="/widerrufsbelehrung" class="text-gray-400 hover:text-[#d9bf8c] transition">
+                            Widerrufsbelehrung
+                        </Link>
+                        <span class="text-gray-600">|</span>
+                        <Link href="/login" class="text-gray-400 hover:text-[#d9bf8c] transition">
                             Admin Login
-                        </a>
+                        </Link>
                     </div>
                 </div>
                 
