@@ -7,37 +7,50 @@ use Illuminate\Support\Facades\DB;
 
 class RenovationTimeFactorSeeder extends Seeder
 {
-    private const WINDOWS = ['nicht', 'bis_5', 'bis_10', 'bis_15', 'bis_20', 'ueber_20', 'weiss_nicht'];
+    private const WINDOWS = ['nicht', 'weiss_nicht', 'bis_5', 'bis_10', 'bis_15', 'bis_20', 'ueber_20'];
 
     public function run(): void
     {
-        $baseFactors = [
-            'nicht' => 0.0,
-            'bis_5' => 1.0,
-            'bis_10' => 0.8,
-            'bis_15' => 0.6,
-            'bis_20' => 0.4,
-            'ueber_20' => 0.2,
-            'weiss_nicht' => 0.0,
-        ];
+        $zeroForAll = array_fill_keys(self::WINDOWS, 0.0);
 
         $categoryFactors = [
-            'baeder_wc' => $baseFactors,
-            'innenausbau' => $baseFactors,
-            'fenster_tueren' => $baseFactors,
-            'heizung' => $baseFactors,
-            'leitungen' => $baseFactors,
-            'dach_waermeschutz' => array_merge($baseFactors, [
-                'bis_10' => 0.75,
-                'bis_15' => 0.5,
-                'bis_20' => 0.3,
-                'ueber_20' => 0.15,
+            'baeder_wc' => array_replace($zeroForAll, [
+                'bis_5' => 1.0,
+                'bis_10' => 0.5,
             ]),
-            'aussenwaende' => array_merge($baseFactors, [
+            'innenausbau' => array_replace($zeroForAll, [
+                'bis_5' => 1.0,
+                'bis_10' => 1.0,
+                'bis_15' => 1.0,
+                'bis_20' => 0.5,
+            ]),
+            'fenster_tueren' => array_replace($zeroForAll, [
+                'bis_5' => 1.0,
+                'bis_10' => 1.0,
+                'bis_15' => 0.5,
+            ]),
+            'heizung' => array_replace($zeroForAll, [
+                'bis_5' => 1.0,
+                'bis_10' => 1.0,
+                'bis_15' => 0.5,
+            ]),
+            'leitungen' => array_replace($zeroForAll, [
+                'bis_5' => 1.0,
+                'bis_10' => 1.0,
+                'bis_15' => 1.0,
+                'bis_20' => 0.5,
+            ]),
+            'dach_waermeschutz' => array_replace($zeroForAll, [
+                'bis_5' => 1.0,
                 'bis_10' => 0.75,
                 'bis_15' => 0.5,
-                'bis_20' => 0.3,
-                'ueber_20' => 0.15,
+                'bis_20' => 0.25,
+            ]),
+            'aussenwaende' => array_replace($zeroForAll, [
+                'bis_5' => 1.0,
+                'bis_10' => 0.75,
+                'bis_15' => 0.5,
+                'bis_20' => 0.25,
             ]),
         ];
 

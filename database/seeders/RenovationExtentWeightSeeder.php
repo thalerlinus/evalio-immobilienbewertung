@@ -10,6 +10,7 @@ class RenovationExtentWeightSeeder extends Seeder
     public function run(): void
     {
         $rows = [
+            ['extent_percent' => 0, 'weight' => 0.0],
             ['extent_percent' => 20, 'weight' => 0.2],
             ['extent_percent' => 40, 'weight' => 0.4],
             ['extent_percent' => 60, 'weight' => 0.6],

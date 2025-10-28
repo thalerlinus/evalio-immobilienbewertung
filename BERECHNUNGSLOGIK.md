@@ -69,17 +69,17 @@ Gewichtungen nach Umfang (*Quelle:* `RenovationExtentWeightSeeder.php`):
 | 80 | 0.8 |
 | 100 | 1.0 |
 
-Zeitfaktoren pro Renovierungszeitraum (*Quelle:* `RenovationTimeFactorSeeder.php`):
+Zeitfaktoren pro Renovierungszeitraum (*Quelle:* `RenovationTimeFactorSeeder.php`). Die Werte beziehen sich auf die Berechnungsnummern 1–7 aus der Kundenvorgabe:
 
-| Zeitfenster | Standardfaktor | Dach/Außenwände |
-|-------------|----------------|-----------------|
-| nicht gemacht | 0.0 | 0.0 |
-| 0–5 Jahre | 1.0 | 1.0 |
-| 6–10 Jahre | 0.8 | 0.75 |
-| 11–15 Jahre | 0.6 | 0.5 |
-| 16–20 Jahre | 0.4 | 0.3 |
-| > 20 Jahre | 0.2 | 0.15 |
-| weiß nicht | 0.0 | 0.0 |
+| Zeitfenster | Bäder/WC | Innenausbau | Fenster/Außentüren | Heizung | Leitungen | Dach/Wärmeschutz | Außenwände |
+|-------------|---------:|------------:|--------------------:|--------:|----------:|-----------------:|-----------:|
+| nicht durchgeführt | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
+| weiß ich nicht | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
+| In den letzten 5 Jahren | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 |
+| In den letzten 5–10 Jahren | 0.5 | 1.0 | 1.0 | 1.0 | 1.0 | 0.75 | 0.75 |
+| In den letzten 10–15 Jahren | 0.0 | 1.0 | 0.5 | 0.5 | 1.0 | 0.5 | 0.5 |
+| In den letzten 15–20 Jahren | 0.0 | 0.5 | 0.0 | 0.0 | 0.5 | 0.25 | 0.25 |
+| Vor über 20 Jahren | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
 
 ### Score-Formelsets (RND-Koeffizienten)
 
@@ -317,12 +317,12 @@ RND = 62,31 Jahre
 
 ### 8. Empfehlung generieren
 
-Basierend auf der RND wird eine Empfehlung gegeben:
+Grundlage ist die untere Grenze der Ersteinschätzung (RND_min). Sie steuert, ob direkt eine Gutachten-Beauftragung angeboten oder lediglich ein Kontakt empfohlen wird:
 
-| RND | Empfehlung |
-|-----|------------|
-| ≥ 25 Jahre | ✅ "Gutachten ist sinnvoll, Beauftragung empfehlen" |
-| < 25 Jahre | ❌ "Gutachten ist nicht sinnvoll, keine Beauftragung ermöglichen" |
+| Ersteinschätzung von | Empfehlung |
+|----------------------|------------|
+| < 50 Jahre | ✅ "Gutachten ist sinnvoll, Beauftragung empfehlen" |
+| ≥ 50 Jahre | ❌ "Gutachten ist nicht sinnvoll, Kontaktaufnahme empfehlen" |
 
 ---
 

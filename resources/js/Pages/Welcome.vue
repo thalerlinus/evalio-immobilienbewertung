@@ -399,7 +399,7 @@ const intervalLabel = computed(() => {
         ?? formatIntervalLabel(result.value.rnd_min, result.value.rnd_max);
 });
 
-const NEGATIVE_RECOMMENDATION = 'Gutachten ist nicht sinnvoll, keine Beauftragung ermöglichen';
+const NEGATIVE_RECOMMENDATION = 'Gutachten ist nicht sinnvoll, Kontaktaufnahme empfehlen';
 
 const recommendationText = computed(() => result.value?.recommendation ?? null);
 

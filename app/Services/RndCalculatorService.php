@@ -100,7 +100,7 @@ class RndCalculatorService
             $afa = $rndRounded > 0 ? round(100 / $rndRounded, 2) : null;
             $afaFrom = $rndMax > 0 ? round(100 / $rndMax, 2) : null;
             $afaTo = $rndMin > 0 ? round(100 / $rndMin, 2) : null;
-            $recommendation = $this->buildRecommendation($rndRounded);
+            $recommendation = $this->buildRecommendation($rndRounded, $rndMin);
 
             $inputs = [
                 'property_type_key' => $propertyType->key,
@@ -253,14 +253,14 @@ class RndCalculatorService
         return [$min, $max];
     }
 
-    private function buildRecommendation(float $rnd): ?string
+    private function buildRecommendation(float $rnd, int $rndMin): ?string
     {
-        if ($rnd <= 0) {
+        if ($rnd <= 0 || $rndMin <= 0) {
             return null;
         }
 
-        return $rnd >= 25
+        return $rndMin < 50
             ? __('Gutachten ist sinnvoll, Beauftragung empfehlen')
-            : __('Gutachten ist nicht sinnvoll, keine Beauftragung ermöglichen');
+            : __('Gutachten ist nicht sinnvoll, Kontaktaufnahme empfehlen');
     }
 }

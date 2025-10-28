@@ -26,7 +26,8 @@ class PriceOnRequestOfferTest extends TestCase
     {
         [$offer, $response] = $this->createPriceOnRequestOffer();
 
-        Mail::assertSentTimes(CalculationResultMail::class, 1);
+        Mail::assertSent(CalculationResultMail::class);
+        $this->assertCount(1, Mail::sent(CalculationResultMail::class));
 
         $this->assertTrue($response->json('data.offer.pricing.price_on_request'));
         $this->assertNull($offer->base_price_eur);
@@ -47,7 +48,8 @@ class PriceOnRequestOfferTest extends TestCase
     {
         [$offer] = $this->createPriceOnRequestOffer();
 
-        Mail::assertSentTimes(CalculationResultMail::class, 1);
+            Mail::assertSent(CalculationResultMail::class);
+            $this->assertCount(1, Mail::sent(CalculationResultMail::class));
 
         Mail::fake();
 
@@ -86,7 +88,8 @@ class PriceOnRequestOfferTest extends TestCase
 
         $this->assertSame(2499, data_get($updatedOffer->input_snapshot, 'pricing.base.amount_eur'));
 
-        Mail::assertSentTimes(CalculationResultMail::class, 1);
+        Mail::assertSent(CalculationResultMail::class);
+        $this->assertCount(1, Mail::sent(CalculationResultMail::class));
         Mail::assertSent(CalculationResultMail::class, function (CalculationResultMail $mail) use ($updatedOffer) {
             return $mail->offer->is($updatedOffer);
         });

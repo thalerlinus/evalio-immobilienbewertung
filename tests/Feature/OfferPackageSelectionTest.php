@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\GaPricing;
 use App\Models\Offer;
+use App\Models\PropertyType;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Session;
@@ -32,16 +34,19 @@ class OfferPackageSelectionTest extends TestCase
             'ga_package_key' => 'besichtigung',
         ]);
 
+        $packageBesichtigung = GaPricing::where('key', 'besichtigung')->firstOrFail();
+        $basePrice = PropertyType::where('key', 'einfamilienhaus')->value('price_standard_eur');
+
         $response
             ->assertOk()
             ->assertJsonPath('data.pricing.ga_package.key', 'besichtigung')
-            ->assertJsonPath('data.pricing.ga_package.price_eur', 350);
+            ->assertJsonPath('data.pricing.ga_package.price_eur', $packageBesichtigung->price_eur);
 
         $offer->refresh();
 
         $this->assertSame('besichtigung', $offer->ga_package_key);
-        $this->assertSame(350, $offer->ga_package_price_eur);
-        $this->assertSame(1449 + 350, $offer->net_total_eur);
+        $this->assertSame($packageBesichtigung->price_eur, $offer->ga_package_price_eur);
+        $this->assertSame($basePrice + $packageBesichtigung->price_eur, $offer->net_total_eur);
         $this->assertSame((int) round($offer->net_total_eur * 0.19), $offer->vat_amount_eur);
         $this->assertSame($offer->net_total_eur + $offer->vat_amount_eur, $offer->gross_total_eur);
         $this->assertEquals(['besichtigung'], $offer->input_snapshot['addons']);
@@ -59,9 +64,13 @@ class OfferPackageSelectionTest extends TestCase
             'ga_package_key' => 'online',
         ]);
 
+        $packageOnline = GaPricing::where('key', 'online')->firstOrFail();
+        $basePrice = PropertyType::where('key', 'einfamilienhaus')->value('price_standard_eur');
+
         $response->assertOk();
         $offer->refresh();
         $this->assertSame('online', $offer->ga_package_key);
+        $this->assertSame($packageOnline->price_eur, $offer->ga_package_price_eur);
 
         $response = $this->withHeader('X-CSRF-TOKEN', $csrfToken)->postJson("/angebote/{$offer->view_token}/package", [
             '_token' => $csrfToken,
@@ -76,7 +85,7 @@ class OfferPackageSelectionTest extends TestCase
 
         $this->assertNull($offer->ga_package_key);
         $this->assertNull($offer->ga_package_price_eur);
-        $this->assertSame(1449, $offer->net_total_eur);
+        $this->assertSame($basePrice, $offer->net_total_eur);
         $this->assertSame((int) round($offer->net_total_eur * 0.19), $offer->vat_amount_eur);
         $this->assertSame($offer->net_total_eur + $offer->vat_amount_eur, $offer->gross_total_eur);
         $this->assertEquals([], $offer->input_snapshot['addons']);
@@ -116,7 +125,11 @@ class OfferPackageSelectionTest extends TestCase
 
         $response->assertOk();
         $this->assertNotEmpty($response->json('data.offer.number'));
-        $this->assertSame('anfrage', $response->json('data.offer.packages.0.key'));
+        $firstPackageKey = GaPricing::where('category', 'package')
+            ->orderBy('sort_order')
+            ->orderBy('label')
+            ->value('key');
+        $this->assertSame($firstPackageKey, $response->json('data.offer.packages.0.key'));
 
         $token = $response->json('data.offer.view_token');
         $this->assertNotNull($token);

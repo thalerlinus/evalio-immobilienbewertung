@@ -78,7 +78,7 @@ class OfferBuilderService
 
             $pricing = $this->buildPricing($lineItems, $vatPercent, $priceOnRequest, null);
 
-            $offer = Offer::create([
+            $attributes = [
                 'calculation_id' => $calculation->id,
                 'customer_id' => $customer?->id,
                 'property_type_id' => $calculation->property_type_id,
@@ -129,7 +129,20 @@ class OfferBuilderService
                 'gross_total_eur' => $pricing['gross_total'],
                 'line_items' => $lineItems,
                 'notes' => $payload['notes'] ?? null,
-            ]);
+            ];
+
+            $existingOffer = Offer::where('calculation_id', $calculation->id)
+                ->latest('id')
+                ->first();
+
+            if ($existingOffer) {
+                $existingOffer->fill($attributes);
+                $existingOffer->save();
+
+                return $existingOffer->fresh(['calculation.propertyType', 'customer']);
+            }
+
+            $offer = Offer::create($attributes);
 
             return $offer->fresh(['calculation.propertyType', 'customer']);
         });

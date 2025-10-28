@@ -3,6 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
@@ -11,6 +12,10 @@ class RegistrationTest extends TestCase
 
     public function test_registration_screen_can_be_rendered(): void
     {
+        if (! Route::has('register')) {
+            $this->markTestSkipped('Selbstregistrierung ist deaktiviert.');
+        }
+
         $response = $this->get('/register');
 
         $response->assertStatus(200);
@@ -18,6 +23,10 @@ class RegistrationTest extends TestCase
 
     public function test_new_users_can_register(): void
     {
+        if (! Route::has('register')) {
+            $this->markTestSkipped('Selbstregistrierung ist deaktiviert.');
+        }
+
         $response = $this->post('/register', [
             'name' => 'Test User',
             'email' => 'test@example.com',
