@@ -775,22 +775,26 @@ const submit = async () => {
                                                 (type.category === 'multi' && form.property_type_category !== type.key)
                                         }"
                                     >
-                                        <!-- Icon Platzhalter - wird später durch echte Icons ersetzt -->
-                                        <div class="flex h-16 w-16 items-center justify-center rounded-lg bg-slate-100 transition-colors group-hover:bg-[#d9bf8c]/20"
+                                        <!-- Icon aus public/images/icons -->
+                                        <div class="flex h-20 w-20 items-center justify-center rounded-lg bg-slate-100 transition-colors group-hover:bg-[#d9bf8c]/20"
                                              :class="{ 
                                                 'bg-[#d9bf8c]/30': 
                                                     (type.category === 'single' && form.property_type_key === type.key) ||
                                                     (type.category === 'multi' && form.property_type_category === type.key)
                                              }">
-                                            <svg class="h-10 w-10 text-slate-400 transition-colors group-hover:text-[#d9bf8c]"
-                                                 :class="{ 
-                                                    'text-[#d9bf8c]': 
+                                            <img 
+                                                :src="`/images/icons/${type.key}.png`" 
+                                                :alt="type.label"
+                                                class="h-16 w-16 object-contain transition-opacity"
+                                                :class="{ 
+                                                    'opacity-100': 
                                                         (type.category === 'single' && form.property_type_key === type.key) ||
-                                                        (type.category === 'multi' && form.property_type_category === type.key)
-                                                 }"
-                                                 fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                                            </svg>
+                                                        (type.category === 'multi' && form.property_type_category === type.key),
+                                                    'opacity-60 group-hover:opacity-100':
+                                                        (type.category === 'single' && form.property_type_key !== type.key) &&
+                                                        (type.category === 'multi' && form.property_type_category !== type.key)
+                                                }"
+                                            />
                                         </div>
                                         <span class="text-center text-xs font-medium text-slate-700 transition-colors group-hover:text-slate-900"
                                               :class="{ 
