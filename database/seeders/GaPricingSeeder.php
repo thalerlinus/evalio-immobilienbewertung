@@ -10,8 +10,8 @@ class GaPricingSeeder extends Seeder
     public function run(): void
     {
         $rows = [
-            ['key' => 'besichtigung', 'label' => 'Besichtigung', 'category' => 'package', 'sort_order' => 20, 'price_eur' => 350],
-            ['key' => 'online', 'label' => 'Online', 'category' => 'package', 'sort_order' => 30, 'price_eur' => 50],
+            ['key' => 'besichtigung', 'label' => 'Vor-Ort-Besichtigung', 'category' => 'package', 'sort_order' => 20, 'price_eur' => 350],
+            ['key' => 'online', 'label' => 'Online-Besichtigung', 'category' => 'package', 'sort_order' => 30, 'price_eur' => 50],
         ];
 
         $vatFactor = 1.19;

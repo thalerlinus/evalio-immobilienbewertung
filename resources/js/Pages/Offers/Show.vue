@@ -231,12 +231,238 @@ const renovationInputs = computed(() => offer.value.form_inputs?.renovations ?? 
 const notes = computed(() => offer.value.form_inputs?.notes ?? null);
 const customerData = computed(() => offer.value.customer ?? {});
 
+const POSITIVE_RECOMMENDATION = 'Gutachten ist sinnvoll, eine Beauftragung wird empfohlen';
+
+const recommendationText = computed(() => offer.value.calculation?.recommendation ?? null);
+
+const recommendationDisplay = computed(() => {
+    if (! recommendationText.value) {
+        return null;
+    }
+
+    if (recommendationText.value === POSITIVE_RECOMMENDATION) {
+        return `Empfehlung: ${recommendationText.value}`;
+    }
+
+    return recommendationText.value;
+});
+
+const billingForm = reactive({
+    street: '',
+    zip: '',
+    city: '',
+});
+
+const billingErrors = reactive({});
+const savingBillingAddress = ref(false);
+const billingMessage = reactive({
+    status: 'idle',
+    message: '',
+});
+
+const syncBillingForm = (customer) => {
+    const fallback = offer.value.form_inputs?.billing_address ?? {};
+
+    billingForm.street = customer?.billing_street
+        ?? fallback.street
+        ?? '';
+    billingForm.zip = customer?.billing_zip
+        ?? fallback.zip
+        ?? '';
+    billingForm.city = customer?.billing_city
+        ?? fallback.city
+        ?? '';
+};
+
+watch(
+    () => offer.value.customer,
+    (customer) => {
+        syncBillingForm(customer ?? {});
+    },
+    { deep: true, immediate: true },
+);
+
 const hasAddress = computed(() =>
     Object.values(addressInputs.value ?? {}).some((value) => value && String(value).trim() !== '')
 );
 
-const hasBillingAddress = computed(() => 
-    customerData.value?.billing_street || customerData.value?.billing_zip || customerData.value?.billing_city
+const hasBillingAddress = computed(() => {
+    const street = customerData.value?.billing_street;
+    const zip = customerData.value?.billing_zip;
+    const city = customerData.value?.billing_city;
+
+    return [street, zip, city].every((value) => {
+        if (value === null || value === undefined) {
+            return false;
+        }
+
+        return String(value).trim().length > 0;
+    });
+});
+
+const clearBillingErrors = () => {
+    Object.keys(billingErrors).forEach((key) => {
+        delete billingErrors[key];
+    });
+};
+
+const resetBillingMessage = () => {
+    if (billingMessage.status !== 'idle') {
+        billingMessage.status = 'idle';
+        billingMessage.message = '';
+    }
+};
+
+const setBillingErrors = (errors) => {
+    clearBillingErrors();
+
+    Object.entries(errors ?? {}).forEach(([key, value]) => {
+        if (! key.startsWith('billing_address.')) {
+            return;
+        }
+
+        const field = key.replace('billing_address.', '');
+        const messages = Array.isArray(value) ? value : [value];
+
+        if (messages.length > 0) {
+            billingErrors[field] = messages[0];
+        }
+    });
+};
+
+const validateBillingForm = () => {
+    clearBillingErrors();
+
+    const trimmedStreet = billingForm.street?.trim() ?? '';
+    const trimmedZip = billingForm.zip?.trim() ?? '';
+    const trimmedCity = billingForm.city?.trim() ?? '';
+
+    if (! trimmedStreet) {
+        billingErrors.street = 'Bitte geben Sie Ihre Straße und Hausnummer ein.';
+    }
+
+    if (! trimmedZip) {
+        billingErrors.zip = 'Bitte geben Sie eine gültige Postleitzahl ein.';
+    } else if (! /^\d{5}$/.test(trimmedZip)) {
+        billingErrors.zip = 'Die Postleitzahl muss aus fünf Ziffern bestehen.';
+    }
+
+    if (! trimmedCity) {
+        billingErrors.city = 'Bitte geben Sie Ihren Wohnort an.';
+    }
+
+    return Object.keys(billingErrors).length === 0;
+};
+
+const BILLING_SAVE_ERROR = 'Die Rechnungsadresse konnte nicht gespeichert werden.';
+
+const saveBillingAddress = async () => {
+    if (! offer.value?.token || offer.value.is_confirmed || savingBillingAddress.value) {
+        return;
+    }
+
+    billingMessage.status = 'idle';
+    billingMessage.message = '';
+
+    const isValid = validateBillingForm();
+
+    if (! isValid) {
+        billingMessage.status = 'error';
+        billingMessage.message = 'Bitte prüfen Sie die markierten Eingaben.';
+        return;
+    }
+
+    savingBillingAddress.value = true;
+
+    try {
+        const response = await fetch(`/angebote/${offer.value.token}/billing-address`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': csrfToken,
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                billing_address: {
+                    street: billingForm.street?.trim() ?? '',
+                    zip: billingForm.zip?.trim() ?? '',
+                    city: billingForm.city?.trim() ?? '',
+                },
+            }),
+        });
+
+        const responseBody = await response.json().catch(() => ({}));
+
+        if (! response.ok) {
+            if (responseBody?.errors) {
+                setBillingErrors(responseBody.errors);
+            }
+
+            const errorMessage = responseBody?.message ?? BILLING_SAVE_ERROR;
+            throw new Error(errorMessage);
+        }
+
+        if (responseBody?.data) {
+            updateOffer(responseBody.data);
+        }
+
+        billingMessage.status = 'success';
+        billingMessage.message = responseBody?.message ?? 'Rechnungsadresse gespeichert.';
+    } catch (error) {
+        billingMessage.status = 'error';
+        billingMessage.message = error?.message ?? BILLING_SAVE_ERROR;
+    } finally {
+        savingBillingAddress.value = false;
+    }
+};
+
+watch(
+    () => billingForm.street,
+    (value) => {
+        resetBillingMessage();
+
+        if (billingErrors.street && (value?.trim()?.length ?? 0) > 0) {
+            delete billingErrors.street;
+        }
+    },
+);
+
+watch(
+    () => billingForm.zip,
+    (value) => {
+        resetBillingMessage();
+
+        if (billingErrors.zip) {
+            const trimmed = value?.trim() ?? '';
+
+            if (/^\d{5}$/.test(trimmed)) {
+                delete billingErrors.zip;
+            }
+        }
+    },
+);
+
+watch(
+    () => billingForm.city,
+    (value) => {
+        resetBillingMessage();
+
+        if (billingErrors.city && (value?.trim()?.length ?? 0) > 0) {
+            delete billingErrors.city;
+        }
+    },
+);
+
+watch(
+    hasBillingAddress,
+    (value) => {
+        if (value && confirmationState.status === 'error' && confirmationState.error === BILLING_REQUIRED_MESSAGE) {
+            confirmationState.status = 'idle';
+            confirmationState.error = '';
+        }
+    },
 );
 
 const hasRenovations = computed(() => (renovationInputs.value ?? []).length > 0);
@@ -258,6 +484,7 @@ const timeWindowLabels = {
 const constructionTypeLabels = {
     massiv: 'Massivbauweise',
     holz: 'Holzbauweise',
+    fertig: 'Fertigbauweise',
     unbekannt: 'Unbekannt',
 };
 
@@ -466,7 +693,9 @@ const supportPhoneHref = computed(() => {
     const raw = props.contactSettings?.support_phone ?? supportPhoneDisplay.value;
     return raw ? String(raw).replace(/\s+/g, '') : '';
 });
-const supportName = computed(() => props.contactSettings?.support_name ?? 'Ihr Evalio-Team');
+const supportName = computed(() => props.contactSettings?.support_name ?? 'Ihr EVALIO-Team');
+
+const BILLING_REQUIRED_MESSAGE = 'Bitte ergänzen Sie Ihre Rechnungsadresse, bevor Sie das Angebot bestätigen.';
 
 const confirmationState = reactive({
     status: 'idle',
@@ -507,6 +736,13 @@ watch(confirmationConsent, (value) => {
 
 const confirmOffer = async () => {
     if (! offer.value?.token || confirming.value) {
+        return;
+    }
+
+    if (! hasBillingAddress.value) {
+        confirmationState.status = 'error';
+        confirmationState.message = '';
+        confirmationState.error = BILLING_REQUIRED_MESSAGE;
         return;
     }
 
@@ -592,7 +828,7 @@ const confirmOffer = async () => {
                 <div class="grid gap-8 lg:grid-cols-3">
                     <div class="lg:col-span-2">
                         <div class="rounded-3xl bg-white p-8 shadow-xl ring-1 ring-black/5">
-                            <h2 class="text-xl font-semibold text-gray-900">Ihre Angebotsdetails</h2>
+                            <h2 class="text-xl font-semibold text-gray-900">Ihre Ersteinschätzung</h2>
                             <p class="mt-2 text-sm text-gray-500">
                                 Basierend auf Ihrer Berechnung mit unserem RND-Kalkulator.
                             </p>
@@ -628,17 +864,17 @@ const confirmOffer = async () => {
                                 <div>
                                     <dt class="text-sm font-medium text-gray-500">Empfehlung</dt>
                                     <dd class="mt-1 text-base font-semibold text-gray-900">
-                                        {{ offer.calculation?.recommendation ?? '—' }}
+                                        {{ recommendationDisplay ?? '—' }}
                                     </dd>
                                 </div>
                                 <div>
-                                    <dt class="text-sm font-medium text-gray-500">RND Dauer</dt>
+                                    <dt class="text-sm font-medium text-gray-500">Restnutzungsdauer nach Ersteinschätzung</dt>
                                     <dd class="mt-1 text-base font-semibold text-gray-900">
                                         {{ rndIntervalLabel ?? '—' }}
                                     </dd>
                                 </div>
                                 <div>
-                                    <dt class="text-sm font-medium text-gray-500">Abschreibung (AfA)</dt>
+                                    <dt class="text-sm font-medium text-gray-500">voraussichtliche Abschreibung (AfA)</dt>
                                     <dd class="mt-1 text-base font-semibold text-gray-900">
                                         {{ offer.calculation?.afa_percent_label ?? '—' }}
                                     </dd>
@@ -647,16 +883,14 @@ const confirmOffer = async () => {
                         </div>
 
                         <div class="mt-8 rounded-3xl bg-white p-8 shadow-xl ring-1 ring-black/5">
-                            <h2 class="text-xl font-semibold text-gray-900">Preistransparenz</h2>
+                            <h2 class="text-xl font-semibold text-gray-900">Preise</h2>
                             <p
                                 v-if="priceOnRequest"
                                 class="mt-2 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800"
                             >
                                 Der Preis wird aktuell individuell kalkuliert. Sie erhalten die genaue Angebotsumme nach unserer manuellen Prüfung per E-Mail.
                             </p>
-                            <p v-else class="mt-2 text-sm text-gray-500">
-                                Alle Preise verstehen sich inklusive 19&nbsp;% Mehrwertsteuer.
-                            </p>
+                          
 
                             <div
                                 v-if="availablePackages.length"
@@ -869,6 +1103,109 @@ const confirmOffer = async () => {
                             </p>
                         </div>
 
+                        <div class="mt-8 rounded-3xl bg-white p-6 shadow-xl ring-1 ring-slate-200">
+                            <h3 class="text-lg font-semibold text-slate-900">Rechnungsadresse</h3>
+                            <p class="mt-2 text-sm text-slate-600">
+                                Wir benötigen Ihre Rechnungsanschrift, um die Bestätigung und spätere Unterlagen korrekt auszustellen.
+                            </p>
+
+                            <form class="mt-4 grid gap-4 md:grid-cols-2" @submit.prevent="saveBillingAddress">
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-slate-700" for="billing-street">
+                                        Straße &amp; Hausnummer <span class="text-red-600">*</span>
+                                    </label>
+                                    <input
+                                        id="billing-street"
+                                        v-model="billingForm.street"
+                                        type="text"
+                                        required
+                                        :disabled="offer.is_confirmed || savingBillingAddress"
+                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
+                                        :class="{ 'border-red-500': billingErrors.street }"
+                                        placeholder="z. B. Musterstraße 123"
+                                    />
+                                    <p v-if="billingErrors.street" class="mt-1 text-xs text-red-600">
+                                        {{ billingErrors.street }}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700" for="billing-zip">
+                                        PLZ <span class="text-red-600">*</span>
+                                    </label>
+                                    <input
+                                        id="billing-zip"
+                                        v-model="billingForm.zip"
+                                        type="text"
+                                        inputmode="numeric"
+                                        pattern="\d{5}"
+                                        maxlength="5"
+                                        required
+                                        :disabled="offer.is_confirmed || savingBillingAddress"
+                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
+                                        :class="{ 'border-red-500': billingErrors.zip }"
+                                        placeholder="z. B. 12345"
+                                    />
+                                    <p v-if="billingErrors.zip" class="mt-1 text-xs text-red-600">
+                                        {{ billingErrors.zip }}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700" for="billing-city">
+                                        Ort <span class="text-red-600">*</span>
+                                    </label>
+                                    <input
+                                        id="billing-city"
+                                        v-model="billingForm.city"
+                                        type="text"
+                                        required
+                                        :disabled="offer.is_confirmed || savingBillingAddress"
+                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
+                                        :class="{ 'border-red-500': billingErrors.city }"
+                                        placeholder="z. B. Berlin"
+                                    />
+                                    <p v-if="billingErrors.city" class="mt-1 text-xs text-red-600">
+                                        {{ billingErrors.city }}
+                                    </p>
+                                </div>
+
+                                <div class="md:col-span-2 flex flex-col gap-3 sm:flex-row sm:items-center">
+                                    <button
+                                        type="submit"
+                                        class="inline-flex items-center justify-center rounded-lg bg-[#d9bf8c] px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-[#c4a875] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c] focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#d9bf8c]/40"
+                                        :disabled="offer.is_confirmed || savingBillingAddress"
+                                    >
+                                        <svg
+                                            v-if="savingBillingAddress"
+                                            class="-ml-1 mr-2 h-4 w-4 animate-spin"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                                        </svg>
+                                        Rechnungsadresse speichern
+                                    </button>
+
+                                    <p
+                                        v-if="billingMessage.status !== 'idle'"
+                                        :class="[
+                                            'text-sm',
+                                            billingMessage.status === 'success' ? 'text-emerald-600' : 'text-red-600',
+                                        ]"
+                                    >
+                                        {{ billingMessage.message }}
+                                    </p>
+                                </div>
+
+                                <p v-if="!hasBillingAddress" class="md:col-span-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                                    Bitte ergänzen Sie Ihre Rechnungsadresse, um das Angebot bestätigen zu können.
+                                </p>
+                            </form>
+                        </div>
+
                         <!-- Angebot bestätigen Block -->
                         <div class="mt-8 rounded-3xl bg-white p-6 shadow-xl ring-1 ring-slate-200">
                             <h3 class="text-lg font-semibold text-slate-900">Angebot bestätigen</h3>
@@ -936,11 +1273,11 @@ const confirmOffer = async () => {
                                     type="button"
                                     :disabled="confirming || ! offer.can_confirm || ! confirmationConsent"
                                     @click="confirmOffer"
-                                    class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#d9bf8c] px-4 py-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-[#c4a875] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c] focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#d9bf8c]/40 sm:py-2"
+                                    class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#d9bf8c] px-6 py-4 text-base font-semibold text-slate-900 shadow-lg transition hover:bg-[#c4a875] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c] focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#d9bf8c]/40 sm:py-3"
                                 >
                                     <svg
                                         v-if="confirming"
-                                        class="h-4 w-4 animate-spin"
+                                        class="h-5 w-5 animate-spin"
                                         xmlns="http://www.w3.org/2000/svg"
                                         fill="none"
                                         viewBox="0 0 24 24"
@@ -948,10 +1285,10 @@ const confirmOffer = async () => {
                                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
                                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
                                     </svg>
-                                    Angebot jetzt bestätigen
+                                    Gutachten jetzt verbindlich beauftragen
                                 </button>
                                 <p class="text-xs text-slate-500">
-                                    Wir senden Ihnen sofort eine Bestätigungs-E-Mail. Bei einer positiven Empfehlung erhält auch das Evalio-Team eine Benachrichtigung.
+                                    Wir senden Ihnen sofort eine Bestätigungs-E-Mail. Bei einer positiven Empfehlung erhält auch das EVALIO-Team eine Benachrichtigung.
                                 </p>
                                 <p
                                     v-if="confirmationState.status === 'error' && confirmationState.error && confirmationState.error !== CONSENT_REQUIRED_MESSAGE"

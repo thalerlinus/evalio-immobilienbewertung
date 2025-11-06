@@ -30,10 +30,9 @@ onUnmounted(() => {
             <div class="flex justify-between items-center h-20">
                 <!-- Logo -->
                 <div class="flex items-center">
-                    <Link href="/" class="flex items-center group">
-                        <h1 class="text-2xl font-bold text-[#d9bf8c] transition-opacity duration-300 group-hover:opacity-80">
-                            EVALIO
-                        </h1>
+                    <Link href="/" class="flex items-center gap-3 group">
+                        <img src="/images/logos/logo.png" alt="EVALIO Logo" class="h-16 md:h-20">
+                        <span class="text-2xl md:text-3xl font-bold text-[#d9bf8c] transition-opacity duration-300 group-hover:opacity-80">EVALIO</span>
                     </Link>
                 </div>
 

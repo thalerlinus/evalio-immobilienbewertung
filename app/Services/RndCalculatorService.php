@@ -260,7 +260,7 @@ class RndCalculatorService
         }
 
         return $rndMin < 50
-            ? __('Gutachten ist sinnvoll, Beauftragung empfehlen')
-            : __('Gutachten ist nicht sinnvoll, Kontaktaufnahme empfehlen');
+            ? __('Gutachten ist sinnvoll, eine Beauftragung wird empfohlen')
+            : __('Ein Gutachten ist für Sie allein auf Grundlage dieser Abfrage nicht sinnvoll. Kontaktieren Sie uns gerne und wir prüfen für Sie, ob es Möglichkeiten für eine verkürzte Restnutzungsdauer gibt.');
     }
 }

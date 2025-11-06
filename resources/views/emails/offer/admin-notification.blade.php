@@ -15,6 +15,9 @@ Ein Kunde hat ein Angebot bestätigt, bei dem das Gutachten als sinnvoll eingest
 | Name | {{ $contact['name'] ?? 'nicht angegeben' }} |
 | E-Mail | {{ $contact['email'] ?? 'nicht angegeben' }} |
 | Telefon | {{ $contact['phone'] ?? 'nicht angegeben' }} |
+| Rechnungsstraße | {{ optional($offer->customer)->billing_street ?? 'nicht angegeben' }} |
+| Rechnungs-PLZ | {{ optional($offer->customer)->billing_zip ?? 'nicht angegeben' }} |
+| Rechnungsort | {{ optional($offer->customer)->billing_city ?? 'nicht angegeben' }} |
 | Immobilienart | {{ $offer->calculation?->propertyType?->label ?? 'k.A.' }} |
 | Empfehlung | {{ $offer->calculation?->recommendation ?? 'k.A.' }} |
 @endcomponent

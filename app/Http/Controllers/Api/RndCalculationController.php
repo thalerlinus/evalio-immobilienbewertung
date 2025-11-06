@@ -77,7 +77,7 @@ class RndCalculationController extends Controller
 
         $offer = null;
 
-        if ($calculation->recommendation === __('Gutachten ist sinnvoll, Beauftragung empfehlen')) {
+    if ($calculation->recommendation === __('Gutachten ist sinnvoll, eine Beauftragung wird empfohlen')) {
             $address = Arr::wrap($validated['address'] ?? []);
             $billingAddress = Arr::wrap($validated['billing_address'] ?? []);
             $contact = Arr::wrap($validated['contact']);

@@ -20,7 +20,7 @@ class CalculationResultMail extends Mailable
 
     public function build(): self
     {
-        return $this->subject(__('Ihre Evalio Immobilien-Einschätzung'))
+        return $this->subject(__('Ihre Ersteinschätzung zur Restnutzungsdauer'))
             ->markdown('emails.calculation.result', [
                 'calculation' => $this->calculation,
                 'offer' => $this->offer,

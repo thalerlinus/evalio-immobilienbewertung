@@ -36,10 +36,10 @@ class CalculateRndRequest extends FormRequest
             'contact.email' => ['required', 'email:rfc,dns', 'max:255'],
             'contact.phone' => ['nullable', 'string', 'max:30', 'regex:/^[0-9 +()\-\/]*$/'],
             'contact.name' => ['nullable', 'string', 'max:255'],
-            'billing_address' => ['required', 'array'],
-            'billing_address.street' => ['required', 'string', 'max:255'],
-            'billing_address.zip' => ['required', 'string', 'size:5', 'regex:/^[0-9]{5}$/'],
-            'billing_address.city' => ['required', 'string', 'max:255'],
+            'billing_address' => ['nullable', 'array'],
+            'billing_address.street' => ['nullable', 'string', 'max:255'],
+            'billing_address.zip' => ['nullable', 'string', 'size:5', 'regex:/^[0-9]{5}$/'],
+            'billing_address.city' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
     }

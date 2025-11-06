@@ -223,6 +223,64 @@ class OfferBuilderService
         });
     }
 
+    public function updateBillingAddress(Offer $offer, array $billingAddress): Offer
+    {
+        return DB::transaction(function () use ($offer, $billingAddress) {
+            $street = trim((string) (Arr::get($billingAddress, 'street') ?? ''));
+            $zip = preg_replace('/\s+/', '', (string) (Arr::get($billingAddress, 'zip') ?? ''));
+            $city = trim((string) (Arr::get($billingAddress, 'city') ?? ''));
+
+            $customer = $offer->customer;
+
+            if (! $customer) {
+                $email = Arr::get($offer->input_snapshot, 'customer.email')
+                    ?? Arr::get($offer->input_snapshot, 'calculation_inputs.contact.email');
+
+                if ($email) {
+                    $customer = Customer::updateOrCreate(
+                        ['email' => $email],
+                        []
+                    );
+
+                    $offer->customer()->associate($customer);
+                }
+            }
+
+            if ($customer) {
+                $customer->fill([
+                    'billing_street' => $street,
+                    'billing_zip' => $zip,
+                    'billing_city' => $city,
+                    'billing_country' => $customer->billing_country ?? 'DE',
+                ]);
+
+                $customer->save();
+            }
+
+            $inputSnapshot = $offer->input_snapshot ?? [];
+
+            $customerSnapshot = $inputSnapshot['customer'] ?? [];
+            $customerSnapshot['billing_street'] = $street;
+            $customerSnapshot['billing_zip'] = $zip;
+            $customerSnapshot['billing_city'] = $city;
+            $inputSnapshot['customer'] = $customerSnapshot;
+
+            $calculationInputs = $inputSnapshot['calculation_inputs'] ?? [];
+            $billingSnapshot = $calculationInputs['billing_address'] ?? [];
+            $billingSnapshot['street'] = $street;
+            $billingSnapshot['zip'] = $zip;
+            $billingSnapshot['city'] = $city;
+            $billingSnapshot['country'] = $billingSnapshot['country'] ?? 'DE';
+            $calculationInputs['billing_address'] = $billingSnapshot;
+            $inputSnapshot['calculation_inputs'] = $calculationInputs;
+
+            $offer->input_snapshot = $inputSnapshot;
+            $offer->save();
+
+            return $offer->fresh(['calculation.propertyType', 'customer']);
+        });
+    }
+
     public function applyDiscount(Offer $offer, ?DiscountCode $discountCode): Offer
     {
         return DB::transaction(function () use ($offer, $discountCode) {

@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue';
+import { Head } from '@inertiajs/vue3';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
@@ -12,6 +13,9 @@ const showingNavigationDropdown = ref(false);
 
 <template>
     <div>
+        <Head title="EVALIO Nutzungsdauer – Ersteinschätzung">
+            <link rel="icon" type="image/png" href="/images/logos/logo.png">
+        </Head>
         <div class="min-h-screen bg-gray-100">
             <nav
                 class="border-b border-gray-100 bg-white"

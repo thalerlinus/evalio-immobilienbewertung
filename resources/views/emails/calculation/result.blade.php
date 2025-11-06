@@ -1,11 +1,11 @@
 @component('mail::message')
-# Ihre Evalio Immobilien-Einschätzung
+# Ihre Ersteinschätzung zur Restnutzungsdauer
 
 @if(!empty($contactName))
 Hallo {{ $contactName }},
 
 @endif
-Vielen Dank für Ihre Anfrage. Auf Basis Ihrer Angaben haben wir die Restnutzungsdauer wie folgt ermittelt:
+Vielen Dank für Ihre Anfrage bei EVALIO. Auf Basis Ihrer Angaben haben wir die Restnutzungsdauer wie folgt ermittelt:
 
 @component('mail::panel')
 **Restnutzungsdauer:** {{ $calculation->rnd_interval_label ?? '–' }}
@@ -22,12 +22,45 @@ Vielen Dank für Ihre Anfrage. Auf Basis Ihrer Angaben haben wir die Restnutzung
 
 @php
     $address = $calculation->inputs['address'] ?? null;
+    $formatAddress = static fn (?string $street, ?string $zip, ?string $city): string => collect([
+        $street ? trim($street) : null,
+        trim(trim(($zip ?? '') . ' ' . ($city ?? '')))
+    ])->filter()->implode(', ');
 @endphp
 
 @if($address && ($address['street'] ?? $address['zip'] ?? $address['city']))
-**Objektadresse:**
-{{ $address['street'] ?? '' }}
-{{ $address['zip'] ?? '' }} {{ $address['city'] ?? '' }}
+**Objektadresse:** {{ $formatAddress($address['street'] ?? null, $address['zip'] ?? null, $address['city'] ?? null) }}
+@endif
+
+@php
+    $customer = $offer->customer;
+    $customerSnapshot = $offer->input_snapshot['customer'] ?? [];
+    $contactStreet = $customer?->billing_street
+        ?? ($customerSnapshot['street'] ?? data_get($calculation->inputs, 'contact.street'));
+    $contactZip = $customer?->billing_zip
+        ?? ($customerSnapshot['zip'] ?? data_get($calculation->inputs, 'contact.zip'));
+    $contactCity = $customer?->billing_city
+        ?? ($customerSnapshot['city'] ?? data_get($calculation->inputs, 'contact.city'));
+    $contactPersonName = $customer?->name
+        ?? ($customerSnapshot['name'] ?? data_get($calculation->inputs, 'contact.name'));
+    $contactEmail = $customer?->email
+        ?? ($customerSnapshot['email'] ?? data_get($calculation->inputs, 'contact.email'));
+    $contactPhone = $customer?->phone
+        ?? ($customerSnapshot['phone'] ?? data_get($calculation->inputs, 'contact.phone'));
+    $contactAddressLine = $formatAddress($contactStreet, $contactZip, $contactCity);
+    $contactLines = collect([
+        $contactPersonName,
+        $contactAddressLine,
+        $contactEmail ? 'E-Mail: ' . $contactEmail : null,
+        $contactPhone ? 'Telefon: ' . $contactPhone : null,
+    ])->filter()->values();
+@endphp
+
+@if($contactLines->isNotEmpty())
+## Ihre Kontaktdaten
+@foreach($contactLines as $line)
+- {{ $line }}
+@endforeach
 @endif
 
 @php
@@ -87,21 +120,16 @@ Vielen Dank für Ihre Anfrage. Auf Basis Ihrer Angaben haben wir die Restnutzung
 Wir haben auf Basis der Daten ein Angebot für Sie erzeugt.
 
 - Angebotsnummer: {{ $offer->number }}
-- Nettobetrag: {{ $offer->net_total_eur ? number_format($offer->net_total_eur, 0, ',', '.') . ' €' : 'auf Anfrage' }}
 - Bruttobetrag: {{ $offer->gross_total_eur ? number_format($offer->gross_total_eur, 0, ',', '.') . ' €' : 'auf Anfrage' }}
 
-@if($offer->customer && ($offer->customer->billing_street || $offer->customer->billing_zip || $offer->customer->billing_city))
-**Rechnungsadresse:**
-{{ $offer->customer->billing_street ?? '' }}
-{{ $offer->customer->billing_zip ?? '' }} {{ $offer->customer->billing_city ?? '' }}
-@endif
-
 @component('mail::button', ['url' => $publicUrl])
-Angebot ansehen & bestätigen
+Angebot ansehen
 @endcomponent
+
+Sie können das Angebot dort bei Bedarf bestätigen.
 
 Sollten Sie Fragen haben, antworten Sie einfach auf diese E-Mail – wir helfen gern weiter.
 
 Viele Grüße
-Ihr Evalio-Team
+Ihr EVALIO-Team
 @endcomponent

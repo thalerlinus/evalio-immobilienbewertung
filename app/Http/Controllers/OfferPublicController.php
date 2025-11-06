@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ApplyDiscountCodeRequest;
+use App\Http\Requests\UpdateOfferBillingAddressRequest;
 use App\Http\Requests\UpdateOfferPackageRequest;
 use App\Mail\OfferAdminNotificationMail;
 use App\Mail\OfferConfirmedMail;
@@ -60,6 +61,13 @@ class OfferPublicController extends Controller
                 'message' => __('Dieses Angebot wurde bereits bestätigt.'),
                 'data' => $this->buildOfferPayload($offer),
             ]);
+        }
+
+        if (! $this->hasBillingAddress($offer)) {
+            return response()->json([
+                'message' => __('Bitte ergänzen Sie Ihre Rechnungsadresse, bevor Sie das Angebot bestätigen.'),
+                'data' => $this->buildOfferPayload($offer),
+            ], 422);
         }
 
         $offer->status = 'accepted';
@@ -154,6 +162,30 @@ class OfferPublicController extends Controller
         ]);
     }
 
+    public function updateBillingAddress(UpdateOfferBillingAddressRequest $request, OfferBuilderService $service, string $token): JsonResponse
+    {
+        $offer = Offer::with(['calculation.propertyType', 'customer'])
+            ->where('view_token', $token)
+            ->firstOrFail();
+
+        if ($offer->accepted_at !== null) {
+            return response()->json([
+                'message' => __('Das Angebot wurde bereits bestätigt und kann nicht mehr geändert werden.'),
+                'data' => $this->buildOfferPayload($offer),
+            ], 422);
+        }
+
+        $validated = $request->validated();
+        $billingAddress = $validated['billing_address'] ?? [];
+
+        $updatedOffer = $service->updateBillingAddress($offer, $billingAddress);
+
+        return response()->json([
+            'message' => __('Rechnungsadresse gespeichert.'),
+            'data' => $this->buildOfferPayload($updatedOffer),
+        ]);
+    }
+
     /**
      * @param  array<string, mixed>|null  $calculationInputs
      * @param  array<string, mixed>|null  $contact
@@ -213,6 +245,7 @@ class OfferPublicController extends Controller
                 'billing_street' => $offer->customer?->billing_street,
                 'billing_zip' => $offer->customer?->billing_zip,
                 'billing_city' => $offer->customer?->billing_city,
+                'billing_country' => $offer->customer?->billing_country,
             ],
             'form_inputs' => [
                 'property' => Arr::only($calculationInputs, [
@@ -227,6 +260,7 @@ class OfferPublicController extends Controller
                 ]),
                 'address' => Arr::get($calculationInputs, 'address', []),
                 'contact' => $contact,
+                'billing_address' => Arr::get($calculationInputs, 'billing_address', []),
                 'renovations' => $renovations,
                 'notes' => $calculationInputs['notes'] ?? null,
             ],
@@ -294,6 +328,16 @@ class OfferPublicController extends Controller
             return false;
         }
 
-        return $recommendation === __('Gutachten ist sinnvoll, Beauftragung empfehlen');
+        return $recommendation === __('Gutachten ist sinnvoll, eine Beauftragung wird empfohlen');
+    }
+
+    private function hasBillingAddress(Offer $offer): bool
+    {
+        $street = $offer->customer?->billing_street;
+        $zip = $offer->customer?->billing_zip;
+        $city = $offer->customer?->billing_city;
+
+        return collect([$street, $zip, $city])
+            ->every(fn ($value) => is_string($value) && trim($value) !== '');
     }
 }

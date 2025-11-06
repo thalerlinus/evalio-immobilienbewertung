@@ -44,6 +44,9 @@ Route::post('/angebote/{token}/package', [OfferPublicController::class, 'updateP
 Route::post('/angebote/{token}/discount', [OfferPublicController::class, 'applyDiscount'])
     ->name('offers.public.discount');
 
+Route::post('/angebote/{token}/billing-address', [OfferPublicController::class, 'updateBillingAddress'])
+    ->name('offers.public.billing-address');
+
 Route::get('/dashboard', function () {
     return redirect()->route('admin.dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');

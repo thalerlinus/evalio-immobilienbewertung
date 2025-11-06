@@ -10,7 +10,10 @@ const currentYear = new Date().getFullYear();
             <div class="grid md:grid-cols-3 gap-8 mb-8">
                 <!-- Unternehmensinfo -->
                 <div>
-                    <h4 class="text-xl font-bold mb-4 text-[#d9bf8c]">EVALIO</h4>
+                    <div class="flex items-center gap-3 mb-4">
+                        <img src="/images/logos/logo.png" alt="EVALIO Logo" class="h-16 md:h-20">
+                        <h4 class="text-2xl md:text-3xl font-bold text-[#d9bf8c]">EVALIO</h4>
+                    </div>
                     <p class="text-gray-300 mb-4">
                         Spezialisiertes Sachverständigenbüro für Immobilienbewertung. Rechtssichere Gutachten zur Restnutzungsdauer, zum Verkehrswert und zur Kaufpreisaufteilung.
                     </p>

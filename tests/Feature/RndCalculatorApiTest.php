@@ -144,13 +144,13 @@ class RndCalculatorApiTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('data.offer', null)
-            ->assertJsonPath('data.calculation.recommendation', 'Gutachten ist nicht sinnvoll, Kontaktaufnahme empfehlen');
+            ->assertJsonPath('data.calculation.recommendation', 'Ein Gutachten ist für Sie allein auf Grundlage dieser Abfrage nicht sinnvoll. Kontaktieren Sie uns gerne und wir prüfen für Sie, ob es Möglichkeiten für eine verkürzte Restnutzungsdauer gibt.');
 
         $calculation = Calculation::latest()->first();
         $this->assertNotNull($calculation);
 
-        $this->assertGreaterThanOrEqual(50, $calculation->rnd_min);
-        $this->assertSame('Gutachten ist nicht sinnvoll, Kontaktaufnahme empfehlen', $calculation->recommendation);
+    $this->assertGreaterThanOrEqual(50, $calculation->rnd_min);
+    $this->assertSame('Ein Gutachten ist für Sie allein auf Grundlage dieser Abfrage nicht sinnvoll. Kontaktieren Sie uns gerne und wir prüfen für Sie, ob es Möglichkeiten für eine verkürzte Restnutzungsdauer gibt.', $calculation->recommendation);
 
         Mail::assertNothingSent();
     }

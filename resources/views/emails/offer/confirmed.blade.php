@@ -13,6 +13,14 @@ wir haben Ihre Angebotsbestätigung erhalten. Gerne begleiten wir Sie auf dem we
 **Aktueller Status:** {{ $offer->status ?? 'bestätigt' }}
 @endcomponent
 
+@if(optional($offer->customer)->billing_street && optional($offer->customer)->billing_zip && optional($offer->customer)->billing_city)
+@component('mail::panel')
+**Rechnungsadresse**  
+{{ $offer->customer->billing_street }}  
+{{ $offer->customer->billing_zip }} {{ $offer->customer->billing_city }}
+@endcomponent
+@endif
+
 
 @component('mail::button', ['url' => $publicUrl])
 Angebot online einsehen

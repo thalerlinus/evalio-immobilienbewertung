@@ -6,7 +6,7 @@ import Footer from '@/Components/Footer.vue';
 defineProps({
     title: {
         type: String,
-        default: 'Willkommen',
+        default: 'EVALIO Nutzungsdauer – Ersteinschätzung',
     },
     user: {
         type: Object,
@@ -29,7 +29,9 @@ defineProps({
 
 <template>
     <div class="min-h-screen bg-gray-50 flex flex-col overflow-x-hidden">
-        <Head :title="title" />
+        <Head :title="title">
+            <link rel="icon" type="image/png" href="/images/logos/logo.png">
+        </Head>
         
         <!-- Navigation -->
         <Navbar 

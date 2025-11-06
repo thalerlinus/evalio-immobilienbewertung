@@ -321,8 +321,8 @@ Grundlage ist die untere Grenze der Ersteinschätzung (RND_min). Sie steuert, ob
 
 | Ersteinschätzung von | Empfehlung |
 |----------------------|------------|
-| < 50 Jahre | ✅ "Gutachten ist sinnvoll, Beauftragung empfehlen" |
-| ≥ 50 Jahre | ❌ "Gutachten ist nicht sinnvoll, Kontaktaufnahme empfehlen" |
+| < 50 Jahre | ✅ "Gutachten ist sinnvoll, eine Beauftragung wird empfohlen" |
+| ≥ 50 Jahre | ❌ "Ein Gutachten ist für Sie allein auf Grundlage dieser Abfrage nicht sinnvoll. Kontaktieren Sie uns gerne und wir prüfen für Sie, ob es Möglichkeiten für eine verkürzte Restnutzungsdauer gibt." |
 
 ---
 
@@ -383,7 +383,7 @@ AfA: round(100 / 62,77, 2) = 1,59 % pro Jahr
 ### Schritt 5: Empfehlung
 ```
 RND ≥ 25 Jahre
-→ "Gutachten ist sinnvoll, Beauftragung empfehlen"
+→ "Gutachten ist sinnvoll, eine Beauftragung wird empfohlen"
 ```
 
 ---
