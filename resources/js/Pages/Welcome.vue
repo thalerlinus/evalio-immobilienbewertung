@@ -1364,7 +1364,7 @@ const submit = async () => {
                                             </span>
                                             <span class="block text-xs text-slate-600">
                                                 Weitere Informationen finden Sie in unserer
-                                                <a href="/datenschutzerklaerung" target="_blank" rel="noreferrer" class="text-blue-600 hover:underline">
+                                                <a href="https://evalio-nutzungsdauer.de/wp-content/uploads/2025/11/Datenschutz.pdf" target="_blank" rel="noreferrer" class="text-blue-600 hover:underline">
                                                     Datenschutzerklärung
                                                 </a>.
                                             </span>
@@ -1380,9 +1380,9 @@ const submit = async () => {
 
                                     <p class="text-xs text-slate-600">
                                         Die
-                                        <a href="/agb" target="_blank" rel="noreferrer" class="text-blue-600 hover:underline">AGB</a>
+                                        <a href="https://evalio-nutzungsdauer.de/wp-content/uploads/2025/11/EVALIO_AGB´s.pdf" target="_blank" rel="noreferrer" class="text-blue-600 hover:underline">AGB</a>
                                         und
-                                        <a href="/datenschutzerklaerung" target="_blank" rel="noreferrer" class="text-blue-600 hover:underline">Datenschutzerklärung</a>
+                                        <a href="https://evalio-nutzungsdauer.de/wp-content/uploads/2025/11/Datenschutz.pdf" target="_blank" rel="noreferrer" class="text-blue-600 hover:underline">Datenschutzerklärung</a>
                                         habe ich zur Kenntnis genommen.
                                     </p>
 

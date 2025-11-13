@@ -1249,9 +1249,9 @@ const confirmOffer = async () => {
                                             </span>
                                             <span class="block text-xs text-slate-700 sm:text-sm">
                                                 Die
-                                                <a href="/agb" target="_blank" rel="noreferrer" class="underline text-[#c4a875] hover:text-[#d9bf8c]">AGB</a>
+                                                <a href="https://evalio-nutzungsdauer.de/wp-content/uploads/2025/11/EVALIO_AGB´s.pdf" target="_blank" rel="noreferrer" class="underline text-[#c4a875] hover:text-[#d9bf8c]">AGB</a>
                                                 und
-                                                <a href="/widerrufsbelehrung" target="_blank" rel="noreferrer" class="underline text-[#c4a875] hover:text-[#d9bf8c]">Widerrufsbelehrung</a>
+                                                <a href="https://evalio-nutzungsdauer.de/wp-content/uploads/2025/11/Widerrufsbelehrung.pdf" target="_blank" rel="noreferrer" class="underline text-[#c4a875] hover:text-[#d9bf8c]">Widerrufsbelehrung</a>
                                                 habe ich zur Kenntnis genommen und akzeptiert.
                                             </span>
                                             <span class="block text-xs text-slate-500">

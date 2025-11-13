@@ -102,7 +102,7 @@ import MainLayout from '@/Layouts/MainLayout.vue';
                         <div class="bg-blue-50 border-l-4 border-blue-400 p-6">
                             <p class="text-slate-700 mb-4">
                                 Auf unserem Internetauftritt finden Sie unsere E-Mail-Kontaktadresse. Hierzu stellen wir Ihnen auf unserer Website unsere 
-                                <a href="/datenschutz" class="text-[#d9bf8c] hover:text-[#c9af7c] font-semibold transition">Datenschutzerklärung</a> 
+                                <a href="https://evalio-nutzungsdauer.de/wp-content/uploads/2025/11/Datenschutz.pdf" class="text-[#d9bf8c] hover:text-[#c9af7c] font-semibold transition">Datenschutzerklärung</a> 
                                 zur Verfügung.
                             </p>
                             <p class="text-slate-700">

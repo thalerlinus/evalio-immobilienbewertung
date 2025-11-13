@@ -1,6 +1,4 @@
 <script setup>
-import { Link } from '@inertiajs/vue3';
-
 const currentYear = new Date().getFullYear();
 </script>
 
@@ -118,25 +116,29 @@ const currentYear = new Date().getFullYear();
                 <div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
                     <!-- Rechtliche Links -->
                     <div class="flex flex-wrap items-center justify-center gap-4 text-sm">
-                        <Link href="/datenschutz" class="text-gray-400 hover:text-[#d9bf8c] transition">
+                        <a href="https://evalio-nutzungsdauer.de/wp-content/uploads/2025/11/Datenschutz.pdf" class="text-gray-400 hover:text-[#d9bf8c] transition">
                             Datenschutz
-                        </Link>
+                        </a>
                         <span class="text-gray-600">|</span>
-                        <Link href="/impressum" class="text-gray-400 hover:text-[#d9bf8c] transition">
+                        <a href="https://evalio-nutzungsdauer.de/wp-content/uploads/2025/11/Impressum.pdf" class="text-gray-400 hover:text-[#d9bf8c] transition">
                             Impressum
-                        </Link>
+                        </a>
                         <span class="text-gray-600">|</span>
-                        <Link href="/agb" class="text-gray-400 hover:text-[#d9bf8c] transition">
+                        <a href="https://evalio-nutzungsdauer.de/wp-content/uploads/2025/11/EVALIO_AGB´s.pdf" class="text-gray-400 hover:text-[#d9bf8c] transition">
                             AGB
-                        </Link>
+                        </a>
                         <span class="text-gray-600">|</span>
-                        <Link href="/widerrufsbelehrung" class="text-gray-400 hover:text-[#d9bf8c] transition">
+                        <a href="https://evalio-nutzungsdauer.de/wp-content/uploads/2025/11/Widerrufsbelehrung.pdf" class="text-gray-400 hover:text-[#d9bf8c] transition">
                             Widerrufsbelehrung
-                        </Link>
+                        </a>
                         <span class="text-gray-600">|</span>
-                        <Link href="/login" class="text-gray-400 hover:text-[#d9bf8c] transition">
+                        <a href="https://evalio-nutzungsdauer.de/wp-content/uploads/2025/11/Haftungsausschluss-Website-Inhalte.pdf" class="text-gray-400 hover:text-[#d9bf8c] transition">
+                            Haftungsausschluss
+                        </a>
+                        <span class="text-gray-600">|</span>
+                        <a href="https://ersteinschaetzung.evalio-nutzungsdauer.de/login" class="text-gray-400 hover:text-[#d9bf8c] transition">
                             Admin Login
-                        </Link>
+                        </a>
                     </div>
                 </div>
                 

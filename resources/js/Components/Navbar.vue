@@ -38,15 +38,15 @@ onUnmounted(() => {
 
                 <!-- Button zur Startseite -->
                 <div>
-                    <Link
-                        href="#"
+                    <a
+                        href="https://evalio-nutzungsdauer.de/"
                         class="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white bg-[#d9bf8c] rounded-lg transition-all duration-300 hover:bg-[#c9af7c] hover:shadow-lg hover:scale-105"
                     >
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                         </svg>
                         <span>Zur Startseite</span>
-                    </Link>
+                    </a>
                 </div>
             </div>
         </div>
