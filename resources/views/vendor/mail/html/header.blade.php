@@ -14,7 +14,7 @@
 <td class="header">
 <a href="{{ $url }}" style="display: inline-flex; align-items: center; text-decoration: none;">
 	<img src="{{ $logoUrl }}" alt="{{ config('app.name') }}" style="height: 40px; margin-right: 12px;">
-	<span style="font-size: 18px; font-weight: 600; color: #0f172a; letter-spacing: 0.05em;">{{ $brandName }}</span>
+	<span style="font-size: 18px; font-weight: 600; color: #c9a646; letter-spacing: 0.05em;">{{ $brandName }}</span>
 </a>
 </td>
 </tr>
