@@ -25,7 +25,7 @@ const currentYear = new Date().getFullYear();
                     <h4 class="text-xl font-bold mb-4">Schnellzugriff</h4>
                     <ul class="space-y-2">
                         <li>
-                            <a href="#funktioniert" class="text-gray-300 hover:text-[#d9bf8c] transition flex items-center gap-2">
+                            <a href="https://evalio-nutzungsdauer.de/#funktioniert" class="text-gray-300 hover:text-[#d9bf8c] transition flex items-center gap-2">
                                 <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
                                 </svg>
@@ -33,15 +33,15 @@ const currentYear = new Date().getFullYear();
                             </a>
                         </li>
                         <li>
-                            <a href="#rechner" class="text-gray-300 hover:text-[#d9bf8c] transition flex items-center gap-2">
+                            <a href="https://evalio-nutzungsdauer.de/#kostenlose" class="text-gray-300 hover:text-[#d9bf8c] transition flex items-center gap-2">
                                 <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
                                 </svg>
-                                <span>Online-Rechner</span>
+                                <span>Kostenlose Ersteinschätzung</span>
                             </a>
                         </li>
                         <li>
-                            <a href="#rechtsgrundlage" class="text-gray-300 hover:text-[#d9bf8c] transition flex items-center gap-2">
+                            <a href="https://evalio-nutzungsdauer.de/#rechtsgrundlage" class="text-gray-300 hover:text-[#d9bf8c] transition flex items-center gap-2">
                                 <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
                                 </svg>
@@ -49,7 +49,7 @@ const currentYear = new Date().getFullYear();
                             </a>
                         </li>
                         <li>
-                            <a href="#ueber-uns" class="text-gray-300 hover:text-[#d9bf8c] transition flex items-center gap-2">
+                            <a href="https://evalio-nutzungsdauer.de/#uns" class="text-gray-300 hover:text-[#d9bf8c] transition flex items-center gap-2">
                                 <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
                                 </svg>
@@ -57,7 +57,7 @@ const currentYear = new Date().getFullYear();
                             </a>
                         </li>
                         <li>
-                            <a href="#faq" class="text-gray-300 hover:text-[#d9bf8c] transition flex items-center gap-2">
+                            <a href="https://evalio-nutzungsdauer.de/#fragen" class="text-gray-300 hover:text-[#d9bf8c] transition flex items-center gap-2">
                                 <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
                                 </svg>
@@ -65,7 +65,7 @@ const currentYear = new Date().getFullYear();
                             </a>
                         </li>
                         <li>
-                            <a href="#kontakt" class="text-gray-300 hover:text-[#d9bf8c] transition flex items-center gap-2">
+                            <a href="https://evalio-nutzungsdauer.de/#vereinbaren" class="text-gray-300 hover:text-[#d9bf8c] transition flex items-center gap-2">
                                 <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
                                 </svg>

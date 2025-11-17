@@ -17,6 +17,9 @@ class Customer extends Model
         'billing_zip',
         'billing_city',
         'billing_country',
+        'billing_name',
+        'billing_company',
+        'billing_email',
     ];
 
     protected $casts = [

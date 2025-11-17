@@ -248,6 +248,9 @@ const recommendationDisplay = computed(() => {
 });
 
 const billingForm = reactive({
+    name: '',
+    company: '',
+    email: '',
     street: '',
     zip: '',
     city: '',
@@ -262,6 +265,23 @@ const billingMessage = reactive({
 
 const syncBillingForm = (customer) => {
     const fallback = offer.value.form_inputs?.billing_address ?? {};
+    const contactFallback = offer.value.form_inputs?.contact ?? {};
+
+    billingForm.name = customer?.billing_name
+        ?? fallback.name
+        ?? customer?.name
+        ?? contactFallback.name
+        ?? '';
+
+    billingForm.company = customer?.billing_company
+        ?? fallback.company
+        ?? '';
+
+    billingForm.email = customer?.billing_email
+        ?? fallback.email
+        ?? customer?.email
+        ?? contactFallback.email
+        ?? '';
 
     billingForm.street = customer?.billing_street
         ?? fallback.street
@@ -290,8 +310,10 @@ const hasBillingAddress = computed(() => {
     const street = customerData.value?.billing_street;
     const zip = customerData.value?.billing_zip;
     const city = customerData.value?.billing_city;
+    const name = customerData.value?.billing_name;
+    const email = customerData.value?.billing_email;
 
-    return [street, zip, city].every((value) => {
+    return [street, zip, city, name, email].every((value) => {
         if (value === null || value === undefined) {
             return false;
         }
@@ -333,9 +355,26 @@ const setBillingErrors = (errors) => {
 const validateBillingForm = () => {
     clearBillingErrors();
 
+    const trimmedName = billingForm.name?.trim() ?? '';
+    const trimmedCompany = billingForm.company?.trim() ?? '';
+    const trimmedEmail = billingForm.email?.trim() ?? '';
     const trimmedStreet = billingForm.street?.trim() ?? '';
     const trimmedZip = billingForm.zip?.trim() ?? '';
     const trimmedCity = billingForm.city?.trim() ?? '';
+
+    if (! trimmedName) {
+        billingErrors.name = 'Bitte geben Sie den Rechnungsempfänger an.';
+    }
+
+    if (trimmedCompany && trimmedCompany.length > 255) {
+        billingErrors.company = 'Die Firmenbezeichnung ist zu lang.';
+    }
+
+    if (! trimmedEmail) {
+        billingErrors.email = 'Bitte geben Sie eine gültige Rechnungs-E-Mail an.';
+    } else if (! billingEmailPattern.test(trimmedEmail)) {
+        billingErrors.email = 'Bitte geben Sie eine gültige Rechnungs-E-Mail an.';
+    }
 
     if (! trimmedStreet) {
         billingErrors.street = 'Bitte geben Sie Ihre Straße und Hausnummer ein.';
@@ -355,6 +394,7 @@ const validateBillingForm = () => {
 };
 
 const BILLING_SAVE_ERROR = 'Die Rechnungsadresse konnte nicht gespeichert werden.';
+const billingEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const saveBillingAddress = async () => {
     if (! offer.value?.token || offer.value.is_confirmed || savingBillingAddress.value) {
@@ -386,6 +426,9 @@ const saveBillingAddress = async () => {
             credentials: 'same-origin',
             body: JSON.stringify({
                 billing_address: {
+                    name: billingForm.name?.trim() ?? '',
+                    company: billingForm.company?.trim() || null,
+                    email: billingForm.email?.trim() ?? '',
                     street: billingForm.street?.trim() ?? '',
                     zip: billingForm.zip?.trim() ?? '',
                     city: billingForm.city?.trim() ?? '',
@@ -417,6 +460,47 @@ const saveBillingAddress = async () => {
         savingBillingAddress.value = false;
     }
 };
+
+watch(
+    () => billingForm.name,
+    (value) => {
+        resetBillingMessage();
+
+        if (billingErrors.name && (value?.trim()?.length ?? 0) > 0) {
+            delete billingErrors.name;
+        }
+    },
+);
+
+watch(
+    () => billingForm.email,
+    (value) => {
+        resetBillingMessage();
+
+        if (billingErrors.email) {
+            const trimmed = value?.trim() ?? '';
+
+            if (billingEmailPattern.test(trimmed)) {
+                delete billingErrors.email;
+            }
+        }
+    },
+);
+
+watch(
+    () => billingForm.company,
+    (value) => {
+        resetBillingMessage();
+
+        if (billingErrors.company) {
+            const trimmed = value?.trim() ?? '';
+
+            if (! trimmed || trimmed.length <= 255) {
+                delete billingErrors.company;
+            }
+        }
+    },
+);
 
 watch(
     () => billingForm.street,
@@ -1111,6 +1195,65 @@ const confirmOffer = async () => {
 
                             <form class="mt-4 grid gap-4 md:grid-cols-2" @submit.prevent="saveBillingAddress">
                                 <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-slate-700" for="billing-name">
+                                        Rechnungsempfänger <span class="text-red-600">*</span>
+                                    </label>
+                                    <input
+                                        id="billing-name"
+                                        v-model="billingForm.name"
+                                        type="text"
+                                        required
+                                        autocomplete="name"
+                                        :disabled="offer.is_confirmed || savingBillingAddress"
+                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
+                                        :class="{ 'border-red-500': billingErrors.name }"
+                                        placeholder="z. B. Max Mustermann"
+                                    />
+                                    <p v-if="billingErrors.name" class="mt-1 text-xs text-red-600">
+                                        {{ billingErrors.name }}
+                                    </p>
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-slate-700" for="billing-company">
+                                        Firma (optional)
+                                    </label>
+                                    <input
+                                        id="billing-company"
+                                        v-model="billingForm.company"
+                                        type="text"
+                                        autocomplete="organization"
+                                        :disabled="offer.is_confirmed || savingBillingAddress"
+                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
+                                        :class="{ 'border-red-500': billingErrors.company }"
+                                        placeholder="z. B. Evalio GmbH"
+                                    />
+                                    <p v-if="billingErrors.company" class="mt-1 text-xs text-red-600">
+                                        {{ billingErrors.company }}
+                                    </p>
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-slate-700" for="billing-email">
+                                        Rechnungs-E-Mail <span class="text-red-600">*</span>
+                                    </label>
+                                    <input
+                                        id="billing-email"
+                                        v-model="billingForm.email"
+                                        type="email"
+                                        required
+                                        autocomplete="email"
+                                        :disabled="offer.is_confirmed || savingBillingAddress"
+                                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
+                                        :class="{ 'border-red-500': billingErrors.email }"
+                                        placeholder="z. B. buchhaltung@firma.de"
+                                    />
+                                    <p v-if="billingErrors.email" class="mt-1 text-xs text-red-600">
+                                        {{ billingErrors.email }}
+                                    </p>
+                                </div>
+
+                                <div class="md:col-span-2">
                                     <label class="block text-sm font-medium text-slate-700" for="billing-street">
                                         Straße &amp; Hausnummer <span class="text-red-600">*</span>
                                     </label>
@@ -1397,6 +1540,31 @@ const confirmOffer = async () => {
                                         Rechnungsadresse
                                     </h3>
                                     <dl class="mt-3 grid gap-4 text-sm text-gray-600 sm:grid-cols-2">
+                                        <div class="sm:col-span-2">
+                                            <dt class="font-medium text-gray-500">Rechnungsempfänger</dt>
+                                            <dd class="mt-1 font-semibold text-gray-900">
+                                                {{ formatOptional(customerData.billing_name) }}
+                                            </dd>
+                                        </div>
+                                        <div v-if="customerData.billing_company" class="sm:col-span-2">
+                                            <dt class="font-medium text-gray-500">Firma</dt>
+                                            <dd class="mt-1 font-semibold text-gray-900">
+                                                {{ customerData.billing_company }}
+                                            </dd>
+                                        </div>
+                                        <div class="sm:col-span-2">
+                                            <dt class="font-medium text-gray-500">Rechnungs-E-Mail</dt>
+                                            <dd class="mt-1 font-semibold text-gray-900 break-words">
+                                                <a
+                                                    v-if="customerData.billing_email"
+                                                    :href="`mailto:${customerData.billing_email}`"
+                                                    class="text-[#d9bf8c] hover:text-[#c4a875] hover:underline"
+                                                >
+                                                    {{ customerData.billing_email }}
+                                                </a>
+                                                <span v-else>—</span>
+                                            </dd>
+                                        </div>
                                         <div class="sm:col-span-2">
                                             <dt class="font-medium text-gray-500">Straße</dt>
                                             <dd class="mt-1 font-semibold text-gray-900">

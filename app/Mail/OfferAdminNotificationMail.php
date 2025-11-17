@@ -16,7 +16,8 @@ class OfferAdminNotificationMail extends Mailable
      */
     public function __construct(
         public Offer $offer,
-        public array $contact
+        public array $contact,
+        public array $billingContact
     ) {
     }
 
@@ -28,6 +29,7 @@ class OfferAdminNotificationMail extends Mailable
             ->markdown('emails.offer.admin-notification', [
                 'offer' => $this->offer,
                 'contact' => $this->contact,
+                'billingContact' => $this->billingContact,
                 'publicUrl' => $publicUrl,
             ]);
     }

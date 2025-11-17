@@ -743,7 +743,7 @@ const submit = async () => {
                                         <div class="font-semibold" :class="currentStep >= 1 ? 'text-slate-900' : 'text-slate-500'">
                                             Objektinformationen
                                         </div>
-                                        <div class="text-xs text-slate-500">Immobilienart & Adresse</div>
+                                        <div class="text-xs text-slate-500">Immobilienart</div>
                                     </div>
                                 </div>
                             </div>
@@ -930,7 +930,7 @@ const submit = async () => {
                                             Bitte geben Sie die Gesamtzahl aller Wohn- und Gewerbeeinheiten an.
                                         </span>
                                     </p>
-                                    <div v-if="form.unit_count && form.unit_count >= 4" class="mt-3 rounded-lg bg-blue-50 p-3 text-sm text-blue-800">
+                                    <div v-if="form.unit_count && form.unit_count >= 4" class="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
                                         <strong v-if="form.unit_count <= 10">✓ Online-Ersteinschätzung möglich</strong>
                                         <strong v-else>
                                             ℹ Für Objekte mit mehr als 10 Einheiten erstellen wir ein individuelles Angebot mit separater Preisabstimmung. Sie können die Anfrage trotzdem abschließen.
@@ -1177,6 +1177,81 @@ const submit = async () => {
                             </div>
                         </div>
 
+
+                            <div
+                                v-if="!isRequestOnlyProperty && currentStep === 3"
+                                class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200"
+                            >
+                                <h3 class="mb-4 text-lg font-semibold text-slate-900">
+                                    Objektadresse
+                                </h3>
+                                <p class="mb-4 text-xs text-slate-500">
+                                    Hinweis: Diese Angaben beziehen sich auf die Adresse der Immobilie (Objektadresse).
+                                </p>
+                                <div class="grid gap-4 md:grid-cols-2">
+                                    <div class="md:col-span-2">
+                                        <label class="block text-sm font-medium text-slate-700">
+                                            Straße <span class="text-red-600">*</span>
+                                        </label>
+                                        <input
+                                            v-model="form.address.street"
+                                            type="text"
+                                            required
+                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
+                                            :class="{ 'border-red-500': errors['address.street']?.length }"
+                                            placeholder="z. B. Musterstraße 123"
+                                        />
+                                        <p
+                                            v-if="errors['address.street']?.length"
+                                            class="mt-1 text-xs text-red-600"
+                                        >
+                                            {{ errors['address.street'][0] }}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700">
+                                            PLZ <span class="text-red-600">*</span>
+                                        </label>
+                                        <input
+                                            v-model="form.address.zip"
+                                            type="text"
+                                            required
+                                            maxlength="5"
+                                            pattern="\d{5}"
+                                            inputmode="numeric"
+                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
+                                            :class="{ 'border-red-500': errors['address.zip']?.length }"
+                                            placeholder="z. B. 12345"
+                                        />
+                                        <p
+                                            v-if="errors['address.zip']?.length"
+                                            class="mt-1 text-xs text-red-600"
+                                        >
+                                            {{ errors['address.zip'][0] }}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700">
+                                            Ort <span class="text-red-600">*</span>
+                                        </label>
+                                        <input
+                                            v-model="form.address.city"
+                                            type="text"
+                                            required
+                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
+                                            :class="{ 'border-red-500': errors['address.city']?.length }"
+                                            placeholder="z. B. Berlin"
+                                        />
+                                        <p
+                                            v-if="errors['address.city']?.length"
+                                            class="mt-1 text-xs text-red-600"
+                                        >
+                                            {{ errors['address.city'][0] }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
                         <!-- Schritt 3: Kontakt, Adresse & Datenschutz -->
                         <div v-show="currentStep === 3" class="space-y-6">
                             <div
@@ -1259,79 +1334,7 @@ const submit = async () => {
                                 </p>
                             </div>
 
-                            <div
-                                v-if="!isRequestOnlyProperty"
-                                class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200"
-                            >
-                                <h3 class="mb-4 text-lg font-semibold text-slate-900">
-                                    Objektadresse
-                                </h3>
-                                <p class="mb-4 text-xs text-slate-500">
-                                    Hinweis: Diese Angaben beziehen sich auf die Adresse der Immobilie (Objektadresse).
-                                </p>
-                                <div class="grid gap-4 md:grid-cols-2">
-                                    <div class="md:col-span-2">
-                                        <label class="block text-sm font-medium text-slate-700">
-                                            Straße <span class="text-red-600">*</span>
-                                        </label>
-                                        <input
-                                            v-model="form.address.street"
-                                            type="text"
-                                            required
-                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
-                                            :class="{ 'border-red-500': errors['address.street']?.length }"
-                                            placeholder="z. B. Musterstraße 123"
-                                        />
-                                        <p
-                                            v-if="errors['address.street']?.length"
-                                            class="mt-1 text-xs text-red-600"
-                                        >
-                                            {{ errors['address.street'][0] }}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-slate-700">
-                                            PLZ <span class="text-red-600">*</span>
-                                        </label>
-                                        <input
-                                            v-model="form.address.zip"
-                                            type="text"
-                                            required
-                                            maxlength="5"
-                                            pattern="\d{5}"
-                                            inputmode="numeric"
-                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
-                                            :class="{ 'border-red-500': errors['address.zip']?.length }"
-                                            placeholder="z. B. 12345"
-                                        />
-                                        <p
-                                            v-if="errors['address.zip']?.length"
-                                            class="mt-1 text-xs text-red-600"
-                                        >
-                                            {{ errors['address.zip'][0] }}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-slate-700">
-                                            Ort <span class="text-red-600">*</span>
-                                        </label>
-                                        <input
-                                            v-model="form.address.city"
-                                            type="text"
-                                            required
-                                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#d9bf8c] focus:outline-none focus:ring-2 focus:ring-[#d9bf8c]"
-                                            :class="{ 'border-red-500': errors['address.city']?.length }"
-                                            placeholder="z. B. Berlin"
-                                        />
-                                        <p
-                                            v-if="errors['address.city']?.length"
-                                            class="mt-1 text-xs text-red-600"
-                                        >
-                                            {{ errors['address.city'][0] }}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
+                       
 
                             <div
                                 v-if="!isRequestOnlyProperty"

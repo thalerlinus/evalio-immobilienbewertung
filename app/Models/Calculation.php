@@ -61,9 +61,19 @@ class Calculation extends Model
     {
         $min = $this->rnd_min;
         $max = $this->rnd_max;
+        $displayMinThreshold = 15;
+        $displayMaxThreshold = 25;
 
         if ($min === null && $max === null) {
             return null;
+        }
+
+        $shouldClampToMinimumDisplay = ($max !== null && $max < $displayMaxThreshold)
+            || ($min !== null && $min < $displayMinThreshold);
+
+        if ($shouldClampToMinimumDisplay) {
+            $min = $displayMinThreshold;
+            $max = $displayMaxThreshold;
         }
 
         if ($min !== null && $max !== null) {

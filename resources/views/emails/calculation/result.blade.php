@@ -15,6 +15,19 @@ Vielen Dank für Ihre Anfrage bei EVALIO. Auf Basis Ihrer Angaben haben wir die 
 **Empfehlung:** {{ $calculation->recommendation ?? '–' }}
 @endcomponent
 
+## Angebot
+Wir haben auf Basis der Daten ein Angebot für Sie erzeugt.
+
+- Angebotsnummer: {{ $offer->number }}
+- Bruttobetrag: {{ $offer->gross_total_eur ? number_format($offer->gross_total_eur, 0, ',', '.') . ' €' : 'auf Anfrage' }}
+
+@component('mail::button', ['url' => $publicUrl])
+Angebot ansehen
+@endcomponent
+
+Sie können das Angebot dort bei Bedarf bestätigen.
+
+
 ## Details zur Immobilie
 - Gebäudeart: {{ optional($calculation->propertyType)->label ?? '–' }}
 - Baujahr: {{ $calculation->baujahr ?? '–' }}
@@ -116,17 +129,7 @@ Vielen Dank für Ihre Anfrage bei EVALIO. Auf Basis Ihrer Angaben haben wir die 
 @endforeach
 @endif
 
-## Angebot
-Wir haben auf Basis der Daten ein Angebot für Sie erzeugt.
 
-- Angebotsnummer: {{ $offer->number }}
-- Bruttobetrag: {{ $offer->gross_total_eur ? number_format($offer->gross_total_eur, 0, ',', '.') . ' €' : 'auf Anfrage' }}
-
-@component('mail::button', ['url' => $publicUrl])
-Angebot ansehen
-@endcomponent
-
-Sie können das Angebot dort bei Bedarf bestätigen.
 
 Sollten Sie Fragen haben, antworten Sie einfach auf diese E-Mail – wir helfen gern weiter.
 

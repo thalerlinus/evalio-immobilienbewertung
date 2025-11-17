@@ -130,8 +130,26 @@ const netDisplay = (offer) => (offer.price_on_request ? '—' : formatCurrency(o
                             <tr v-for="offer in offers.data" :key="offer.id" class="hover:bg-gray-50">
                                 <td class="px-4 py-3 text-sm font-semibold text-gray-900">{{ offer.number }}</td>
                                 <td class="px-4 py-3 text-sm text-gray-600">
-                                    <div class="font-medium text-gray-900">{{ offer.customer?.name ?? '—' }}</div>
-                                    <div class="text-xs text-gray-500">{{ offer.customer?.email ?? '—' }}</div>
+                                    <div class="space-y-1">
+                                        <div class="text-xs font-semibold uppercase tracking-wide text-gray-400">Kontakt</div>
+                                        <div class="font-medium text-gray-900">{{ offer.customer?.name ?? '—' }}</div>
+                                        <div class="text-xs text-gray-500">{{ offer.customer?.email ?? '—' }}</div>
+                                    </div>
+                                    <div
+                                        class="mt-3 rounded-xl bg-gray-50 p-3 text-xs text-gray-600"
+                                        v-if="offer.customer?.billing_name || offer.customer?.billing_email || offer.customer?.billing_street"
+                                    >
+                                        <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Rechnungsempfänger</div>
+                                        <div class="mt-1 font-medium text-gray-900">{{ offer.customer?.billing_name ?? '—' }}</div>
+                                        <div v-if="offer.customer?.billing_company" class="text-[11px] uppercase tracking-wide text-gray-500">
+                                            {{ offer.customer.billing_company }}
+                                        </div>
+                                        <div class="text-gray-600">{{ offer.customer?.billing_email ?? '—' }}</div>
+                                        <div class="mt-1 text-gray-500">
+                                            <span>{{ offer.customer?.billing_street ?? '—' }}</span><br>
+                                            <span>{{ offer.customer?.billing_zip ?? '' }} {{ offer.customer?.billing_city ?? '' }}</span>
+                                        </div>
+                                    </div>
                                 </td>
                                 <td class="px-4 py-3 text-sm text-gray-600">{{ offer.property_type ?? '—' }}</td>
                                 <td class="px-4 py-3 text-sm">
@@ -192,6 +210,21 @@ const netDisplay = (offer) => (offer.price_on_request ? '—' : formatCurrency(o
                                 </div>
                                 <p class="text-sm font-medium text-gray-900">{{ offer.customer?.name ?? '—' }}</p>
                                 <p class="text-xs text-gray-500 truncate">{{ offer.customer?.email ?? '—' }}</p>
+                                <div
+                                    class="mt-3 rounded-xl bg-gray-50 p-3 text-xs text-gray-600"
+                                    v-if="offer.customer?.billing_name || offer.customer?.billing_email || offer.customer?.billing_street"
+                                >
+                                    <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Rechnungsempfänger</div>
+                                    <div class="mt-1 font-medium text-gray-900">{{ offer.customer?.billing_name ?? '—' }}</div>
+                                    <div v-if="offer.customer?.billing_company" class="text-[11px] uppercase tracking-wide text-gray-500">
+                                        {{ offer.customer.billing_company }}
+                                    </div>
+                                    <div class="text-gray-600">{{ offer.customer?.billing_email ?? '—' }}</div>
+                                    <div class="mt-1 text-gray-500">
+                                        <span>{{ offer.customer?.billing_street ?? '—' }}</span><br>
+                                        <span>{{ offer.customer?.billing_zip ?? '' }} {{ offer.customer?.billing_city ?? '' }}</span>
+                                    </div>
+                                </div>
                                 <div class="mt-2 flex flex-col gap-1 text-xs text-gray-600">
                                     <div><span class="font-medium">Immobilie:</span> {{ offer.property_type ?? '—' }}</div>
                                     <div><span class="font-medium">Erstellt:</span> {{ formatDateTime(offer.created_at) }}</div>

@@ -77,15 +77,16 @@ class OfferPublicController extends Controller
 
         $calculationInputs = $this->resolveCalculationInputs($offer);
         $contact = $this->resolveContactData($offer, $calculationInputs);
+        $billingContact = $this->resolveBillingContact($offer, $calculationInputs);
 
-        if ($customerEmail = $contact['email'] ?? $offer->customer?->email) {
-            Mail::to($customerEmail)->send(new OfferConfirmedMail($offer, $contact));
+        if ($billingEmail = $billingContact['email'] ?? null) {
+            Mail::to($billingEmail)->send(new OfferConfirmedMail($offer, $billingContact));
         }
 
         $adminAddress = ContactSetting::findValue('admin_notification_email', config('mail.admin_address'));
 
         if ($this->shouldNotifyAdmin($offer) && $adminAddress) {
-            Mail::to($adminAddress)->send(new OfferAdminNotificationMail($offer, $contact));
+            Mail::to($adminAddress)->send(new OfferAdminNotificationMail($offer, $contact, $billingContact));
         }
 
         return response()->json([
@@ -242,6 +243,9 @@ class OfferPublicController extends Controller
                 'name' => $offer->customer?->name,
                 'email' => $offer->customer?->email,
                 'phone' => $offer->customer?->phone,
+                'billing_name' => $offer->customer?->billing_name,
+                'billing_company' => $offer->customer?->billing_company,
+                'billing_email' => $offer->customer?->billing_email,
                 'billing_street' => $offer->customer?->billing_street,
                 'billing_zip' => $offer->customer?->billing_zip,
                 'billing_city' => $offer->customer?->billing_city,
@@ -265,6 +269,35 @@ class OfferPublicController extends Controller
                 'notes' => $calculationInputs['notes'] ?? null,
             ],
             'raw_inputs' => $calculationInputs,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $calculationInputs
+     * @return array<string, mixed>
+     */
+    private function resolveBillingContact(Offer $offer, array $calculationInputs): array
+    {
+        $customerSnapshot = $offer->input_snapshot['customer'] ?? [];
+        $billingSnapshot = Arr::get($calculationInputs, 'billing_address', []);
+
+        $fallbackContact = $this->resolveContactData($offer, $calculationInputs);
+
+        return [
+            'name' => $offer->customer?->billing_name
+                ?? $customerSnapshot['billing_name']
+                ?? $billingSnapshot['name']
+                ?? $fallbackContact['name']
+                ?? null,
+            'company' => $offer->customer?->billing_company
+                ?? $customerSnapshot['billing_company']
+                ?? $billingSnapshot['company']
+                ?? null,
+            'email' => $offer->customer?->billing_email
+                ?? $customerSnapshot['billing_email']
+                ?? $billingSnapshot['email']
+                ?? $fallbackContact['email']
+                ?? null,
         ];
     }
 
@@ -333,11 +366,22 @@ class OfferPublicController extends Controller
 
     private function hasBillingAddress(Offer $offer): bool
     {
-        $street = $offer->customer?->billing_street;
-        $zip = $offer->customer?->billing_zip;
-        $city = $offer->customer?->billing_city;
+        $calculationInputs = $this->resolveCalculationInputs($offer);
+        $billingContact = $this->resolveBillingContact($offer, $calculationInputs);
 
-        return collect([$street, $zip, $city])
-            ->every(fn ($value) => is_string($value) && trim($value) !== '');
+        $street = $offer->customer?->billing_street
+            ?? Arr::get($calculationInputs, 'billing_address.street');
+        $zip = $offer->customer?->billing_zip
+            ?? Arr::get($calculationInputs, 'billing_address.zip');
+        $city = $offer->customer?->billing_city
+            ?? Arr::get($calculationInputs, 'billing_address.city');
+
+        return collect([
+            $street,
+            $zip,
+            $city,
+            $billingContact['name'] ?? null,
+            $billingContact['email'] ?? null,
+        ])->every(fn ($value) => is_string($value) && trim($value) !== '');
     }
 }

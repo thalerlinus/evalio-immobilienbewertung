@@ -12,9 +12,14 @@ Ein Kunde hat ein Angebot bestätigt, bei dem das Gutachten als sinnvoll eingest
 @component('mail::table')
 | Feld | Wert |
 | :--- | :---- |
+| **Kontakt Ersteinschätzung** | &nbsp; |
 | Name | {{ $contact['name'] ?? 'nicht angegeben' }} |
 | E-Mail | {{ $contact['email'] ?? 'nicht angegeben' }} |
 | Telefon | {{ $contact['phone'] ?? 'nicht angegeben' }} |
+| **Rechnungsempfänger** | &nbsp; |
+| Name | {{ $billingContact['name'] ?? 'nicht angegeben' }} |
+| Firma | {{ $billingContact['company'] ?? 'nicht angegeben' }} |
+| Rechnungs-E-Mail | {{ $billingContact['email'] ?? 'nicht angegeben' }} |
 | Rechnungsstraße | {{ optional($offer->customer)->billing_street ?? 'nicht angegeben' }} |
 | Rechnungs-PLZ | {{ optional($offer->customer)->billing_zip ?? 'nicht angegeben' }} |
 | Rechnungsort | {{ optional($offer->customer)->billing_city ?? 'nicht angegeben' }} |

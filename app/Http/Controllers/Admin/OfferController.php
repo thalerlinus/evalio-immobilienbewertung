@@ -40,6 +40,12 @@ class OfferController extends Controller
                     'customer' => [
                         'name' => $offer->customer?->name,
                         'email' => $offer->customer?->email,
+                        'billing_name' => $offer->customer?->billing_name,
+                        'billing_company' => $offer->customer?->billing_company,
+                        'billing_email' => $offer->customer?->billing_email,
+                        'billing_street' => $offer->customer?->billing_street,
+                        'billing_zip' => $offer->customer?->billing_zip,
+                        'billing_city' => $offer->customer?->billing_city,
                     ],
                     'property_type' => $offer->propertyType?->label,
                     'public_url' => route('offers.public.show', $offer->view_token),

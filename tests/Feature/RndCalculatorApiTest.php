@@ -234,6 +234,37 @@ class RndCalculatorApiTest extends TestCase
         $this->assertSame(25, $formula['alter_schwelle']);
     }
 
+    public function test_rnd_interval_label_is_clamped_to_minimum_range(): void
+    {
+        $payload = [
+            'property_type_key' => 'einfamilienhaus',
+            'baujahr' => 1800,
+            'anschaffungsjahr' => 1990,
+            'steuerjahr' => 2025,
+            'renovations' => [],
+            'contact' => [
+                'name' => 'Min Range',
+                'email' => 'min@example.de',
+                'phone' => '+49 30 000000',
+            ],
+            'billing_address' => [
+                'street' => 'Teststraße 1',
+                'zip' => '10115',
+                'city' => 'Berlin',
+                'country' => 'DE',
+            ],
+        ];
+
+        $this->postJson('/api/rnd/calculate', $payload)->assertOk();
+
+        $calculation = Calculation::latest()->first();
+        $this->assertNotNull($calculation);
+
+        $this->assertSame('rd. 15 – 25 Jahre', $calculation->rnd_interval_label);
+        $this->assertLessThan(15, $calculation->rnd_min ?? 0);
+        $this->assertLessThan(25, $calculation->rnd_max ?? 0);
+    }
+
     public function test_it_creates_offer_from_calculation(): void
     {
         $calcResponse = $this->postJson('/api/rnd/calculate', [

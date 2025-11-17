@@ -226,19 +226,26 @@ class OfferBuilderService
     public function updateBillingAddress(Offer $offer, array $billingAddress): Offer
     {
         return DB::transaction(function () use ($offer, $billingAddress) {
+            $name = trim((string) (Arr::get($billingAddress, 'name') ?? ''));
+            $company = trim((string) (Arr::get($billingAddress, 'company') ?? ''));
+            $email = trim((string) (Arr::get($billingAddress, 'email') ?? ''));
             $street = trim((string) (Arr::get($billingAddress, 'street') ?? ''));
             $zip = preg_replace('/\s+/', '', (string) (Arr::get($billingAddress, 'zip') ?? ''));
             $city = trim((string) (Arr::get($billingAddress, 'city') ?? ''));
 
+            $company = $company !== '' ? $company : null;
+            $email = $email !== '' ? $email : null;
+
             $customer = $offer->customer;
 
             if (! $customer) {
-                $email = Arr::get($offer->input_snapshot, 'customer.email')
-                    ?? Arr::get($offer->input_snapshot, 'calculation_inputs.contact.email');
+                $emailForLookup = Arr::get($offer->input_snapshot, 'customer.email')
+                    ?? Arr::get($offer->input_snapshot, 'calculation_inputs.contact.email')
+                    ?? $email;
 
-                if ($email) {
+                if ($emailForLookup) {
                     $customer = Customer::updateOrCreate(
-                        ['email' => $email],
+                        ['email' => $emailForLookup],
                         []
                     );
 
@@ -248,6 +255,9 @@ class OfferBuilderService
 
             if ($customer) {
                 $customer->fill([
+                    'billing_name' => $name,
+                    'billing_company' => $company,
+                    'billing_email' => $email,
                     'billing_street' => $street,
                     'billing_zip' => $zip,
                     'billing_city' => $city,
@@ -260,6 +270,9 @@ class OfferBuilderService
             $inputSnapshot = $offer->input_snapshot ?? [];
 
             $customerSnapshot = $inputSnapshot['customer'] ?? [];
+            $customerSnapshot['billing_name'] = $name;
+            $customerSnapshot['billing_company'] = $company;
+            $customerSnapshot['billing_email'] = $email;
             $customerSnapshot['billing_street'] = $street;
             $customerSnapshot['billing_zip'] = $zip;
             $customerSnapshot['billing_city'] = $city;
@@ -267,6 +280,9 @@ class OfferBuilderService
 
             $calculationInputs = $inputSnapshot['calculation_inputs'] ?? [];
             $billingSnapshot = $calculationInputs['billing_address'] ?? [];
+            $billingSnapshot['name'] = $name;
+            $billingSnapshot['company'] = $company;
+            $billingSnapshot['email'] = $email;
             $billingSnapshot['street'] = $street;
             $billingSnapshot['zip'] = $zip;
             $billingSnapshot['city'] = $city;
@@ -329,6 +345,9 @@ class OfferBuilderService
         $payload = [
             'name' => $input['name'] ?? null,
             'phone' => $input['phone'] ?? null,
+            'billing_name' => $input['billing_name'] ?? null,
+            'billing_company' => $input['billing_company'] ?? null,
+            'billing_email' => $input['billing_email'] ?? null,
             'billing_street' => $input['street'] ?? Arr::get($calculation->inputs, 'billing_address.street'),
             'billing_zip' => $input['zip'] ?? Arr::get($calculation->inputs, 'billing_address.zip'),
             'billing_city' => $input['city'] ?? Arr::get($calculation->inputs, 'billing_address.city'),

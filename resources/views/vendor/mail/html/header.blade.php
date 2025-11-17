@@ -2,12 +2,18 @@
 
 @php
 	$brandName = strtoupper(config('app.name'));
-	$logoUrl = asset('images/logos/logo.png');
+	$baseUrl = config('app.url');
+	$defaultHost = 'https://ersteinschaetzung.evalio-nutzungsdauer.de';
+	if (blank($baseUrl) || str_contains($baseUrl, 'localhost')) {
+		$baseUrl = $defaultHost;
+	}
+	$logoUrl = rtrim($baseUrl, '/') . '/images/logos/logo.png';
 @endphp
 
 <tr>
 <td class="header">
-<a href="{{ $url }}" style="display: inline-flex; align-items: center; text-decoration: none;">	
+<a href="{{ $url }}" style="display: inline-flex; align-items: center; text-decoration: none;">
+	<img src="{{ $logoUrl }}" alt="{{ config('app.name') }}" style="height: 40px; margin-right: 12px;">
 	<span style="font-size: 18px; font-weight: 600; color: #0f172a; letter-spacing: 0.05em;">{{ $brandName }}</span>
 </a>
 </td>
