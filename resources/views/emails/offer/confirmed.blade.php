@@ -50,9 +50,9 @@ Angebot online einsehen
 - Energieausweis (falls vorhanden)
 - Lageplan (optional, falls vorhanden)
 - Mitteilung über bekannte Schäden oder Defekte
-- Sonstige Unterlagen (optional), z. B. Exposé, Baubeschreibungen, Protokolle der Eigentümerversammlungen, Schadensberichte
+- Sonstige Unterlagen (optional): z. B. Exposé, Baubeschreibungen, Protokolle der Eigentümerversammlungen, Schadensberichte etc.
 
-## Fotos (nur notwendig ohne Vor-Ort-Besichtigung)
+## Fotos (nur notwendig, wenn keine Video- / Vor-Ort-Besichtigung)
 - Außenansicht vorne (gesamtes Gebäude von der Straße aus)
 - Außenansicht hinten (z. B. vom Garten oder Hinterhof)
 - Treppenhaus (falls vorhanden)

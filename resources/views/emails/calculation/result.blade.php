@@ -5,7 +5,7 @@
 Hallo {{ $contactName }},
 
 @endif
-Vielen Dank für Ihre Anfrage bei EVALIO. Auf Basis Ihrer Angaben haben wir die Restnutzungsdauer wie folgt ermittelt:
+vielen Dank für Ihre Anfrage bei EVALIO. Auf Basis Ihrer Angaben haben wir die Restnutzungsdauer wie folgt ermittelt:
 
 @component('mail::panel')
 **Restnutzungsdauer:** {{ $calculation->rnd_interval_label ?? '–' }}

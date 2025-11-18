@@ -9,6 +9,8 @@ use Illuminate\Support\Str;
 
 class Calculation extends Model
 {
+    private const DISPLAY_MIN_RND_YEARS = 15;
+    private const DISPLAY_MAX_RND_YEARS = 25;
     protected $fillable = [
         'user_id',
         'property_type_id',
@@ -59,21 +61,10 @@ class Calculation extends Model
 
     public function getRndIntervalLabelAttribute(): ?string
     {
-        $min = $this->rnd_min;
-        $max = $this->rnd_max;
-        $displayMinThreshold = 15;
-        $displayMaxThreshold = 25;
+        [$min, $max] = $this->resolveDisplayIntervalBounds();
 
         if ($min === null && $max === null) {
             return null;
-        }
-
-        $shouldClampToMinimumDisplay = ($max !== null && $max < $displayMaxThreshold)
-            || ($min !== null && $min < $displayMinThreshold);
-
-        if ($shouldClampToMinimumDisplay) {
-            $min = $displayMinThreshold;
-            $max = $displayMaxThreshold;
         }
 
         if ($min !== null && $max !== null) {
@@ -97,7 +88,9 @@ class Calculation extends Model
 
     public function getAfaPercentFromAttribute(): ?float
     {
-        $denominator = $this->rnd_max ?? $this->rnd_years;
+        [, $max] = $this->resolveDisplayIntervalBounds();
+
+        $denominator = $max ?? $this->rnd_max ?? $this->rnd_years;
 
         if (! $denominator || $denominator <= 0) {
             return null;
@@ -108,7 +101,9 @@ class Calculation extends Model
 
     public function getAfaPercentToAttribute(): ?float
     {
-        $denominator = $this->rnd_min ?? $this->rnd_years;
+        [$min] = $this->resolveDisplayIntervalBounds();
+
+        $denominator = $min ?? $this->rnd_min ?? $this->rnd_years;
 
         if (! $denominator || $denominator <= 0) {
             return null;
@@ -137,6 +132,28 @@ class Calculation extends Model
         $value = $from ?? $to;
 
         return $value !== null ? sprintf('rd. %s %%', number_format($value, 2, ',', '.')) : null;
+    }
+
+    /**
+     * @return array{0: ?int, 1: ?int}
+     */
+    private function resolveDisplayIntervalBounds(): array
+    {
+        $min = $this->rnd_min;
+        $max = $this->rnd_max;
+
+        if ($min === null && $max === null) {
+            return [null, null];
+        }
+
+        $shouldClampToMinimumDisplay = ($max !== null && $max < self::DISPLAY_MAX_RND_YEARS)
+            || ($min !== null && $min < self::DISPLAY_MIN_RND_YEARS);
+
+        if ($shouldClampToMinimumDisplay) {
+            return [self::DISPLAY_MIN_RND_YEARS, self::DISPLAY_MAX_RND_YEARS];
+        }
+
+        return [$min, $max];
     }
 
     protected static function boot()
