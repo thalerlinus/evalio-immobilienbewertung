@@ -1016,7 +1016,7 @@ const confirmOffer = async () => {
                                     >
                                         <span class="flex flex-col">
                                             <span class="font-medium text-slate-900">{{ pkg.label }}</span>
-                                            <span class="text-xs text-slate-500">Einmalige Zusatzleistung</span>
+                                            
                                         </span>
                                         <span class="text-sm font-semibold text-slate-900 sm:text-right">{{ formatPackagePrice(pkg.price_eur) }}</span>
                                     </button>
